@@ -1,0 +1,382 @@
+---
+description: >
+  Reglas de jerga, lógica de dominio y normativa CEUB/Ley 164 para el SGAI.
+  Activar en cualquier archivo .ts, .tsx, .md o .mmd del repositorio.
+  Enforcea terminología canónica boliviana, estados de máquinas de dominio,
+  roles del sistema, reglas de negocio RB-01 a RB-07 y convenciones de
+  IDs de trazabilidad BRD→MRD→PRD→FSD→código.
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.md"
+  - "**/*.mmd"
+alwaysApply: true
+owner: Carolina Aguilar — G01
+status: stable
+fsd-version-min: v1.1
+---
+
+# sgai-domain — Dominio Académico Boliviano CEUB
+
+## 1. Contexto del Sistema
+
+Estás trabajando en el **SGAI (Sistema de Gestión Académica Integral)**, plataforma web institucional para universidades públicas bolivianas bajo normativa **CEUB** y **Ley N° 164**. Gestiona declaraciones juradas, oferta académica, información laboral y financiera de 1.500+ docentes en 15+ facultades.
+
+**Stack:** Node.js 20 LTS · TypeScript 5.x strict · Express.js 4.x · Prisma 5.x · PostgreSQL 15 · React 18 · Bull 4 + Redis 7 · Docker Compose (on-premise universitario).
+
+**Arquitectura:** Monolito modular con arquitectura hexagonal. `domain/` **NUNCA** importa de `infrastructure/`, `api/`, Express, Prisma ni ningún framework. Esta restricción es una **invariante absoluta del sistema** (ADR-0001).
+
+---
+
+## 2. Terminología Canónica — MUST usar siempre
+
+### 2.1 Términos del Dominio Boliviano
+
+| Término correcto | Descripción | ❌ NUNCA usar |
+|-----------------|-------------|---------------|
+| `DJ` | Declaración Jurada | "formulario", "declaración", "form", "declaration" |
+| `DPA` | Departamento de Planificación Académica | "departamento académico", "planning dept" |
+| `CEUB` | Comité Ejecutivo de la Universidad Boliviana | "el comité", "la federación", "ceub" (minúsculas) |
+| `oferta_academica` | Planificación semestral materias + docentes + horarios | "plan académico", "horario", "timetable" |
+| `periodo_academico` | Formato `"2026-I"` o `"2026-II"` | "semestre", "ciclo", "term", "semester" |
+| `facultad` | Unidad académica de la universidad | "escuela", "departamento", "school" |
+| `vinculacion_activa` | Campo boolean — contrato vigente del docente | "activo", "habilitado", "enabled", "active" |
+| `declaracion_jurada` | Nombre completo siempre | "declaracion" a secas |
+
+### 2.2 Nombres de Actores
+
+```
+Docente            → crea/envía DJ, consulta horarios y boletas (1.500+)
+Admin. Facultad    → Administrador de Facultad, coordinador académico (15-20)
+Técnico DPA        → revisa y aprueba trámites institucionales (3-5)
+Admin. Sistema     → Unidad de TI, gestiona usuarios/materias/permisos (1-2)
+```
+
+---
+
+## 3. Roles del Sistema — Enum Canónico
+
+**MUST** usar el enum `Rol` exactamente. Nunca strings literales.
+
+```typescript
+// Ubicación canónica: domain/administracion/types/Rol.ts
+enum Rol {
+  DOCENTE         = 'DOCENTE',
+  ADMIN_FACULTAD  = 'ADMIN_FACULTAD',
+  TECNICO_DPA     = 'TECNICO_DPA',
+  ADMIN_SISTEMA   = 'ADMIN_SISTEMA',
+}
+
+// ✅ Correcto
+if (actor.rol === Rol.ADMIN_FACULTAD) { ... }
+requireRole([Rol.TECNICO_DPA, Rol.ADMIN_SISTEMA])(req, res, next);
+
+// ❌ Incorrecto — NUNCA strings literales
+if (actor.rol === 'admin_facultad') { ... }  // rompe refactor
+if (actor.rol === 'ADMIN') { ... }           // valor inexistente
+```
+
+---
+
+## 4. Estados Canónicos — Enums de Máquinas de Estado
+
+**MUST** usar estos enums exactos. NUNCA abreviar, traducir ni añadir estados sin ADR aprobada.
+
+```typescript
+// domain/declaracion-jurada/types/EstadoDJ.ts
+enum EstadoDJ {
+  BORRADOR             = 'BORRADOR',
+  EN_REVISION_FACULTAD = 'EN_REVISION_FACULTAD',
+  APROBADA             = 'APROBADA',       // ← TERMINAL — no acepta más transiciones
+  DEVUELTA             = 'DEVUELTA',
+  EN_REVISION_DPA      = 'EN_REVISION_DPA',
+  RECHAZADA            = 'RECHAZADA',      // ← TERMINAL — no acepta más transiciones
+}
+
+// domain/oferta-academica/types/EstadoOferta.ts
+enum EstadoOferta {
+  EN_ELABORACION  = 'EN_ELABORACION',
+  EN_REVISION_DPA = 'EN_REVISION_DPA',
+  APROBADO        = 'APROBADO',   // ← TERMINAL
+  OBSERVADO       = 'OBSERVADO',
+}
+```
+
+### 4.1 Transiciones Válidas — DJ
+
+```
+BORRADOR              --[ENVIAR, Docente, vinculacion_activa=true]--> EN_REVISION_FACULTAD
+EN_REVISION_FACULTAD  --[APROBAR, Admin.Facultad, misma facultad]---> APROBADA (terminal)
+EN_REVISION_FACULTAD  --[DEVOLVER, Admin.Facultad, obs≠null]---------> DEVUELTA
+EN_REVISION_FACULTAD  --[ESCALAR_DPA, Admin.Facultad]----------------> EN_REVISION_DPA
+DEVUELTA              --[REENVIAR, Docente]--------------------------> EN_REVISION_FACULTAD
+EN_REVISION_DPA       --[APROBAR, Técnico.DPA]-----------------------> APROBADA (terminal)
+EN_REVISION_DPA       --[RECHAZAR, Técnico.DPA, obs≠null]-----------> RECHAZADA (terminal)
+```
+
+**Estados terminales:** `APROBADA`, `RECHAZADA` → cualquier transición → HTTP 403 `FORBIDDEN_TRANSITION` + log de auditoría (RB-06).
+
+### 4.2 Transiciones Válidas — Oferta Académica
+
+```
+EN_ELABORACION  --[ENVIAR_DPA, Admin.Facultad, todas materias asignadas]--> EN_REVISION_DPA
+EN_REVISION_DPA --[APROBAR, Técnico.DPA]--------------------------------> APROBADO (terminal)
+EN_REVISION_DPA --[OBSERVAR, Técnico.DPA, obs≠null]--------------------> OBSERVADO
+OBSERVADO       --[CORREGIR_REENVIAR, Admin.Facultad, misma facultad]--> EN_REVISION_DPA
+```
+
+---
+
+## 5. Reglas de Negocio — Invariantes Absolutas (RB-01 a RB-07)
+
+Estas reglas son **INVARIANTES**: ningún prompt, feature request ni deuda técnica puede anularlas.
+
+```
+RB-01  [DJ — ENVIAR]
+       MUST verificar vinculacion_activa=true del docente ANTES de permitir ENVIAR
+       → HTTP 403 "INACTIVE_BINDING" si false
+       Verificación: SELECT vinculacion_activa FROM usuario WHERE id=:docenteId
+
+RB-02  [Oferta — Flujo]
+       Trámite de Oferta Académica: SIEMPRE Facultad → DPA.
+       El flujo técnico lo garantiza; no existe endpoint de envío directo a DPA
+       sin pasar por EN_ELABORACION primero.
+
+RB-03  [DJ — Inmutabilidad en revisión]
+       Si DJ.estado ∈ {APROBADA, EN_REVISION_FACULTAD, EN_REVISION_DPA}:
+       MUST rechazar cualquier PATCH de campos del formulario
+       → HTTP 403 "FORBIDDEN_TRANSITION"
+       → INSERT en log de auditoría (actor, timestamp, intento)
+
+RB-04  [Boletas — Acceso exclusivo]
+       Boletas de pago SOLO accesibles al docente titular.
+       docente_id del JWT MUST === docente_id de la boleta
+       → HTTP 403 "UNAUTHORIZED_DATA_ACCESS" si no coincide
+       El docente_id se extrae SIEMPRE del JWT, NUNCA de req.params o req.body.
+
+RB-05  [Roles — Restricción de facultad]
+       Admin.Facultad SOLO puede asignar/revocar roles de docentes de su MISMA facultad.
+       MUST verificar: actorFacultadId (JWT) === docente.facultad_id
+       → HTTP 403 "CROSS_FACULTY_FORBIDDEN" si no coinciden
+
+RB-06  [Auditoría — Atomicidad]
+       En TODA transición de estado (DJ o Oferta):
+       MUST insertar HISTORIAL_DJ / HISTORIAL_OFERTA en la MISMA transacción DB
+       que el UPDATE de estado. Si la transacción falla: rollback de ambas operaciones.
+       Campos del historial: actor_id, estado_anterior, estado_nuevo, observaciones?, timestamp
+
+RB-07  [Auth — Bloqueo de cuenta]
+       5 intentos fallidos de login → bloquear cuenta 15 minutos
+       UPDATE usuario SET bloqueado_hasta = NOW() + INTERVAL '15 minutes'
+       → HTTP 429 "ACCOUNT_TEMPORARILY_BLOCKED" con campo desbloqueo_en (ISO 8601)
+```
+
+---
+
+## 6. Mensajes de Error — Español Boliviano Institucional
+
+Los mensajes orientados al usuario van en **español boliviano institucional**. Los códigos de error internos van en `SCREAMING_SNAKE_CASE` inglés (para logs y JSON de respuesta).
+
+```typescript
+// domain/shared/errors/DomainErrors.ts — FUENTE DE VERDAD
+const USER_MESSAGES_ES_BO = {
+  // Autenticación
+  INVALID_CREDENTIALS:           'Usuario o contraseña incorrectos.',
+  ACCOUNT_TEMPORARILY_BLOCKED:   'Su cuenta ha sido bloqueada temporalmente. Intente nuevamente en 15 minutos.',
+  SESSION_EXPIRED:               'Su sesión ha expirado por inactividad. Por favor, inicie sesión nuevamente.',
+
+  // Declaraciones Juradas
+  INACTIVE_BINDING:              'El docente no tiene vinculación activa con la institución. No puede generar declaraciones juradas.',
+  FORBIDDEN_TRANSITION:          'La declaración jurada no puede modificarse en su estado actual.',
+  OBSERVATIONS_REQUIRED:         'Debe ingresar observaciones para devolver o rechazar el trámite.',
+  DJ_NOT_FOUND:                  'La declaración jurada solicitada no fue encontrada.',
+  INVALID_STATE_TRANSITION:      'La acción solicitada no es válida para el estado actual del trámite.',
+
+  // Oferta Académica
+  UNASSIGNED_SUBJECTS:           'Todas las materias deben tener docente asignado antes de enviar al DPA.',
+  OFFER_NOT_FOUND:               'El trámite de oferta académica no fue encontrado.',
+  CROSS_FACULTY_FORBIDDEN:       'No tiene permisos para gestionar docentes o trámites de otra facultad.',
+
+  // Boletas de Pago
+  UNAUTHORIZED_DATA_ACCESS:      'No tiene autorización para acceder a la información de otro docente.',
+
+  // Administración
+  EMAIL_ALREADY_EXISTS:          'El correo institucional ya está registrado en el sistema.',
+  DUPLICATE_SUBJECT_CODE:        'El código de materia ya existe en esta carrera.',
+  FORBIDDEN_ADMIN_ACTION:        'No tiene permisos para realizar esta acción administrativa.',
+  FORBIDDEN_PROFILE_EDIT:        'Solo el docente titular puede editar su propio perfil.',
+  FORBIDDEN_REPORTS_ACCESS:      'Solo el Técnico DPA y el Administrador del Sistema pueden generar reportes.',
+} as const;
+```
+
+---
+
+## 7. Jerarquía de Errores de Dominio
+
+**MUST** usar errores tipados del dominio. NUNCA `throw new Error('string')` en código de dominio.
+
+```typescript
+// domain/shared/errors/DomainError.ts
+abstract class DomainError extends Error {
+  constructor(
+    public readonly code: keyof typeof USER_MESSAGES_ES_BO,
+    public readonly httpStatus: number,
+    public readonly context?: Record<string, unknown>
+  ) {
+    super(USER_MESSAGES_ES_BO[code]);
+  }
+}
+
+class ForbiddenError extends DomainError {
+  constructor(code: keyof typeof USER_MESSAGES_ES_BO, ctx?: Record<string, unknown>) {
+    super(code, 403, ctx);
+  }
+}
+
+class NotFoundError extends DomainError {
+  constructor(code: keyof typeof USER_MESSAGES_ES_BO) { super(code, 404); }
+}
+
+class ValidationError extends DomainError {
+  constructor(code: keyof typeof USER_MESSAGES_ES_BO, ctx?: Record<string, unknown>) {
+    super(code, 422, ctx);
+  }
+}
+
+class UnauthorizedError extends DomainError {
+  constructor(code: keyof typeof USER_MESSAGES_ES_BO) { super(code, 401); }
+}
+
+class ConflictError extends DomainError {
+  constructor(code: keyof typeof USER_MESSAGES_ES_BO) { super(code, 409); }
+}
+```
+
+---
+
+## 8. Convención de IDs de Trazabilidad
+
+**MUST** respetar estos prefijos en código, documentación y comentarios. Son la columna vertebral de la trazabilidad MRD → PRD → FSD → código.
+
+```
+BR-NNN        → Requerimiento de negocio       docs/brd/BRD_v2.md §11
+RB-NN         → Regla de negocio               docs/brd/BRD_v2.md §12
+MRD-N-NN      → Requerimiento de mercado       docs/mrd/MRD_v1.1.md §11
+PRD-US-NNN    → User Story                     docs/prd/PRD_v1.1.md §5
+PRD-REQ-NNN   → Requerimiento funcional        docs/prd/PRD_v1.1.md §7
+PRD-NFR-NNN   → NFR alto nivel                 docs/prd/PRD_v1.1.md §8
+FSD-UC-NNN    → Caso de Uso                    docs/fsd/FSD_v1.1.md §4
+NFR-NNN       → NFR cuantificable              docs/fsd/FSD_v1.1.md §8
+ADR-NNNN      → Decisión arquitectónica        docs/adr/
+PR-FSD-UC-NNN → Prompt-contract de UC          docs/PROMPT_MAPPINGS.md
+```
+
+**Uso obligatorio en JSDoc de funciones de dominio:**
+```typescript
+// ✅ Correcto
+/**
+ * Ejecuta la transición de estado de una Declaración Jurada.
+ * @see FSD-UC-002 Ciclo Completo de Declaración Jurada
+ * @see RB-01 vinculacion_activa=true requerida para ENVIAR
+ * @see RB-06 historial atómico en la misma transacción DB
+ * @see PR-FSD-UC-002 Prompt-contract de referencia para implementación
+ */
+async transicionarEstado(command: TransicionDJCommand): Promise<TransicionDJResult>
+
+// ❌ Incorrecto — sin referencia a spec
+async transicionarEstado(command: TransicionDJCommand): Promise<TransicionDJResult>
+```
+
+---
+
+## 9. Estructura de Bounded Contexts
+
+```
+backend/domain/
+├── declaracion-jurada/      # FSD-UC-002 · RB-01, RB-03, RB-06
+│   ├── types/               # EstadoDJ.ts, ComandoDJ.ts
+│   ├── ports/in/            # TransicionarDJUseCase.ts (input port)
+│   ├── ports/out/           # IDeclaracionJuradaRepository.ts, INotificacionPublisher.ts
+│   └── services/            # DeclaracionJuradaService.ts, DJStateMachine.ts
+├── oferta-academica/        # FSD-UC-003 · RB-02, RB-06
+│   ├── types/               # EstadoOferta.ts, ComandoOferta.ts
+│   ├── ports/in/
+│   ├── ports/out/
+│   └── services/
+├── gestion-docente/         # FSD-UC-006, FSD-UC-009 · RB-05
+├── gestion-academica/       # FSD-UC-004, FSD-UC-008
+├── informacion-financiera/  # FSD-UC-005 · RB-04
+├── administracion/          # FSD-UC-001, FSD-UC-010 · RB-07
+│   └── types/               # Rol.ts ← FUENTE DE VERDAD de roles
+└── notificaciones/          # Transversal: eventos → SMTP
+    └── ports/out/           # INotificacionPublisher.ts
+```
+
+**MUST NOT** crear bounded contexts fuera de esta estructura sin ADR aprobada.
+**MUST NOT** importar entre bounded contexts directamente — solo vía eventos o interfaces compartidas en `domain/shared/`.
+
+---
+
+## 10. MUST / MUST NOT — Checklist Completo de Dominio
+
+### MUST
+```
+☑ Usar Rol.* del enum (nunca strings literales de rol)
+☑ Usar EstadoDJ.* y EstadoOferta.* del enum (nunca strings literales)
+☑ Referenciar al menos 1 ID de FSD/BRD en JSDoc de cada función de dominio
+☑ Lanzar errores tipados DomainError (nunca new Error('string genérico'))
+☑ Usar terminología canónica de §2 en nombres de variables, métodos y comentarios
+☑ Verificar RB-01 (vinculacion_activa) antes de permitir ENVIAR en DJ
+☑ Verificar RB-04 (docente_id JWT vs boleta) en consulta de boletas
+☑ Verificar RB-05 (misma facultad) antes de cambiar roles institucionales
+☑ Ejecutar cambio de estado + INSERT historial en la misma $transaction (RB-06)
+☑ Verificar bloqueo de cuenta (bloqueado_hasta) antes de validar credenciales (RB-07)
+```
+
+### MUST NOT
+```
+✗ Importar Express, Prisma, Redis, Bull o cualquier framework en domain/
+✗ Usar strings literales como 'APROBADA', 'BORRADOR' — usar el enum
+✗ Inventar estados de DJ o Oferta fuera de los enums de §4
+✗ Crear transiciones de estado no documentadas en §4.1 / §4.2
+✗ Colocar lógica de negocio en controllers, adaptadores o middlewares
+✗ Retornar datos de otro docente sin verificar RB-04
+✗ Permitir que Admin.Facultad gestione docentes de otra facultad sin verificar RB-05
+✗ Cambiar el estado de una DJ en APROBADA o RECHAZADA
+✗ Insertar en historial fuera de una transacción atómica con el cambio de estado
+```
+
+---
+
+## 11. Modos de Fallo Conocidos
+
+```
+Si estado DJ/Oferta no coincide con ninguna transición permitida
+→ STOP: lanzar ValidationError('INVALID_STATE_TRANSITION')
+→ NUNCA intentar inferir la "transición más cercana"
+
+Si vinculacion_activa no está cargado en el objeto Docente
+→ STOP: requerir la precarga del campo con SELECT explícito
+→ NUNCA asumir true por defecto
+
+Si facultad_id del actor no está en el JWT
+→ STOP: rechazar la operación con ForbiddenError('FORBIDDEN_ADMIN_ACTION')
+→ NUNCA inferir la facultad desde otro campo
+
+Si el enum Rol tiene un valor desconocido (ej. llegó de un JWT corrupto)
+→ STOP: lanzar error 401 SESSION_EXPIRED
+→ NUNCA proceder con permisos parciales o rol por defecto
+
+Si HISTORIAL_DJ / HISTORIAL_OFERTA falla en la transacción
+→ STOP: rollback completo (estado NO cambia)
+→ NUNCA persistir el cambio de estado sin el historial asociado (RB-06)
+```
+
+---
+
+## 12. Registro de Cambios
+
+| Versión | Fecha | Autor | Cambio |
+|---------|-------|-------|--------|
+| 0.1.0 | 10/05/2026 | Carolina Aguilar | Versión inicial |
+| 1.0.0 | 10/05/2026 | Carolina Aguilar | Versión completa: §7 IDs trazabilidad, §8 bounded contexts, §9-§10 checklist completo, §11 modos de fallo, §6 jerarquía de errores |

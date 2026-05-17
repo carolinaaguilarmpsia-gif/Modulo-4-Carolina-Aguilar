@@ -1,0 +1,19 @@
+%%{init: {"theme": "default"}}%%
+stateDiagram-v2
+  title state_oferta_academica — Máquina de Estados: Oferta Académica
+
+  [*] --> EN_ELABORACION : crear (Admin.Facultad)
+
+  EN_ELABORACION --> EN_ELABORACION : guardar_parcial (Admin.Facultad)
+  EN_ELABORACION --> EN_REVISION_DPA : ENVIAR_DPA\n[Admin.Facultad]\n[GUARDA: todas las materias con docente asignado]
+
+  EN_REVISION_DPA --> APROBADO : APROBAR\n[Técnico DPA]
+  EN_REVISION_DPA --> OBSERVADO : OBSERVAR\n[Técnico DPA, observaciones != null]
+
+  OBSERVADO --> EN_REVISION_DPA : CORREGIR_REENVIAR\n[Admin.Facultad, misma facultad]
+
+  APROBADO --> [*] : (estado terminal)
+
+  note right of EN_ELABORACION : Editable por Admin.Facultad
+  note right of EN_REVISION_DPA : Bloqueado para la Facultad — RB-02
+  note right of APROBADO : Inmutable — RB-06 (historial completo)

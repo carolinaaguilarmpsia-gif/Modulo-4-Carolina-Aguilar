@@ -1,0 +1,24 @@
+%%{init: {"theme": "default"}}%%
+stateDiagram-v2
+  title state_dj — Máquina de Estados: Declaración Jurada (DJ)
+
+  [*] --> BORRADOR : crear (Docente con vinculacion_activa)
+
+  BORRADOR --> EN_REVISION_FACULTAD : ENVIAR\n[Docente, vinculacion_activa=true]
+  BORRADOR --> BORRADOR : guardar_borrador (Docente)
+
+  EN_REVISION_FACULTAD --> APROBADA : APROBAR\n[Admin.Facultad, misma facultad]
+  EN_REVISION_FACULTAD --> DEVUELTA : DEVOLVER\n[Admin.Facultad, observaciones != null]
+  EN_REVISION_FACULTAD --> EN_REVISION_DPA : ESCALAR_DPA\n[Admin.Facultad]
+
+  DEVUELTA --> EN_REVISION_FACULTAD : REENVIAR\n[Docente]
+
+  EN_REVISION_DPA --> APROBADA : APROBAR\n[Técnico DPA]
+  EN_REVISION_DPA --> RECHAZADA : RECHAZAR\n[Técnico DPA, observaciones != null]
+
+  APROBADA --> [*] : (estado terminal — no editable)
+  RECHAZADA --> [*] : (estado terminal — no editable)
+
+  note right of BORRADOR : Editable por el Docente
+  note right of APROBADA : Inmutable — RB-03
+  note right of RECHAZADA : Inmutable — RB-03

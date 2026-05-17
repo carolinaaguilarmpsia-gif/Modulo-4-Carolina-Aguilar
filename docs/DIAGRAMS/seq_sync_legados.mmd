@@ -1,0 +1,30 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_sync_legados — Sincronización con Sistemas Legados (Cron Job)
+  participant CRON as Scheduler (Cron 2:00 AM)
+  participant ADAPTER as Legacy Adapter
+  participant LEGADO as Sistema Legado\n(Nómina / SII)
+  participant DB as PostgreSQL SGAI
+  participant QUEUE as Bull Queue (Alertas)
+
+  CRON->>ADAPTER: ejecutarSincronizacion()
+  ADAPTER->>LEGADO: healthCheck()
+  alt Sistema legado disponible
+    LEGADO-->>ADAPTER: 200 OK
+    ADAPTER->>LEGADO: fetchData({ periodo: current })
+    LEGADO-->>ADAPTER: [ RawData[] ]
+    ADAPTER->>ADAPTER: Validar schema (Zod)\nDescartar registros inválidos
+    ADAPTER->>DB: upsertBatch(validatedData)\n(upsert por fuente_externa_id)
+    DB-->>ADAPTER: { upserted: N, errors: M }
+    ADAPTER->>DB: UPDATE sync_log SET ultima_sync=NOW(), estado='OK'
+    Note over ADAPTER: Reset contador de fallos consecutivos
+  else Sistema legado NO disponible
+    LEGADO-->>ADAPTER: Timeout / Connection refused
+    ADAPTER->>DB: UPDATE sync_log SET fallos_consecutivos+=1
+    DB-->>ADAPTER: { fallos_consecutivos: K }
+    alt K >= 3 (tres fallos consecutivos)
+      ADAPTER->>QUEUE: enqueue(AlertaAdminTI { sistema, fallos: K })
+      Note over QUEUE: Notifica a Unidad de TI
+    end
+    Note over ADAPTER,DB: SGAI sirve datos cacheados\ncon advertencia al usuario (modo degradado)
+  end

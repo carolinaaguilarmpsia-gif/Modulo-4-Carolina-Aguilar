@@ -1,0 +1,38 @@
+%%{init: {"theme": "default"}}%%
+gantt
+  title gantt_roadmap_v1 — Roadmap SGAI v1.0 (Sprint Plan)
+  dateFormat YYYY-MM-DD
+  excludes weekends
+
+  section Sprint 0 — Análisis
+    POC-01 Integración legados        :crit, poc1, 2026-06-01, 5d
+    POC-02 Máquina estados bajo carga :crit, poc2, after poc1, 3d
+    Configurar proyecto y CI          :proj, after poc1, 3d
+
+  section Sprint 1 — Auth + DJ Core
+    M-AUTH autenticación JWT+LDAP     :crit, s1a, 2026-06-15, 5d
+    M-ADMIN usuarios y materias       :s1b, after s1a, 4d
+    M-DJ endpoints CRUD               :crit, s1c, after s1a, 5d
+    M-DJ máquina de estados           :crit, s1d, after s1c, 3d
+
+  section Sprint 2 — Oferta + Notif
+    M-OFERTA endpoints                :crit, s2a, 2026-07-01, 5d
+    M-OFERTA máquina de estados       :crit, s2b, after s2a, 3d
+    M-NOTIF servicio SMTP Bull        :s2c, after s2a, 3d
+    Tests integración DJ+Oferta       :s2d, after s2b, 3d
+
+  section Sprint 3 — Integraciones
+    M-INTEGR adaptador nómina         :crit, s3a, 2026-07-15, 5d
+    M-INTEGR adaptador SII            :s3b, after s3a, 4d
+    M-INFO-LABORAL horarios           :s3c, after s3b, 3d
+
+  section Sprint 4 — Boletas + Perfil
+    M-BOLETAS consulta docente        :crit, s4a, 2026-08-01, 4d
+    M-PERFIL CV docente               :s4b, after s4a, 3d
+    M-REPORTES DPA PDF/Excel          :s4c, after s4b, 4d
+
+  section Sprint 5 — QA + Go-Live
+    Tests E2E Playwright              :crit, s5a, 2026-08-18, 4d
+    Pruebas de carga k6               :crit, s5b, after s5a, 3d
+    Capacitación usuarios piloto      :s5c, after s5b, 3d
+    Go-live v1.0 (MVP completo)       :milestone, 2026-09-05, 0d

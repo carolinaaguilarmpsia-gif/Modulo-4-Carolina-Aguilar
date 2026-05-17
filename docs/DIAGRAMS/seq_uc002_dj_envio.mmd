@@ -1,0 +1,27 @@
+%%{init: {"theme": "default", "themeVariables": {"fontSize": "14px"}}}%%
+sequenceDiagram
+  title seq_uc002_dj_envio — FSD-UC-002 Envío de Declaración Jurada
+  actor Docente
+  participant API as API SGAI
+  participant DOM as DJ Domain Service
+  participant DB as PostgreSQL
+  participant QUEUE as Bull Queue
+  participant SMTP as Servidor SMTP
+
+  Docente->>API: PATCH /declaraciones-juradas/:id/estado\n{ comando: "ENVIAR" }
+  API->>API: Verificar JWT (rol=DOCENTE, userId)
+  API->>DOM: transicionarEstado({ djId, comando: ENVIAR, actorId })
+  DOM->>DB: SELECT docente WHERE id=actorId\n(verificar vinculacion_activa)
+  DB-->>DOM: { vinculacion_activa: true }
+  DOM->>DB: SELECT dj WHERE id=djId
+  DB-->>DOM: { estado: BORRADOR }
+  DOM->>DOM: Validar transición BORRADOR→EN_REVISION_FACULTAD
+  DOM->>DB: $transaction([\n  UPDATE dj SET estado=EN_REVISION_FACULTAD,\n  INSERT historial_dj\n])
+  DB-->>DOM: OK
+  DOM->>QUEUE: enqueue(NotificacionEmail { to: adminFacultad, tipo: "DJ_ENVIADA" })
+  QUEUE-->>DOM: jobId encolado
+  DOM-->>API: { djId, estadoNuevo: "EN_REVISION_FACULTAD", historialId }
+  API-->>Docente: 200 OK { djId, estado, numero_seguimiento }
+  Note over QUEUE,SMTP: Asíncrono — no bloquea la respuesta
+  QUEUE->>SMTP: Enviar correo al Admin. de Facultad
+  SMTP-->>QUEUE: OK
