@@ -1,0 +1,17 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc009_roles_docente — FSD-UC-009 Roles Institucionales
+  actor AdminFacultad as Admin. Facultad
+  participant API as API SGAI
+  participant DOM as GestionDocente Service
+  participant DB as PostgreSQL
+
+  AdminFacultad->>API: PATCH /admin/docentes/:id/rol-institucional
+  API->>DOM: asignarRol({ docenteId, rol, actorFacultadId })
+  DOM->>DB: SELECT docente.facultad_id
+  DB-->>DOM: facultad_id
+  DOM->>DOM: Verificar RB-05 misma facultad
+  DOM->>DB: $transaction UPDATE usuario + INSERT auditoria
+  DB-->>DOM: OK
+  DOM-->>API: { docenteId, rolNuevo }
+  API-->>AdminFacultad: 200 OK

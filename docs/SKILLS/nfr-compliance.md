@@ -1,6 +1,16 @@
 # Skill: NFR Compliance — Verificador de Requisitos No Funcionales
 
-> **Cuándo usar:** Al generar código de infraestructura, middlewares, queries de BD o al revisar PR. Verifica que el código generado cumple los NFRs del FSD_v1.1.md §10.
+> **Cuándo usar:** Al generar código de infraestructura, middlewares, queries de BD o al revisar PR. Verifica que el código generado cumple los NFRs del FSD §11.
+
+---
+
+## Procedimiento de ejecución
+
+1. Abrir `docs/FSD/FSD_v1.md` §11 y esta tabla de NFRs.
+2. Por cada cambio en PR, marcar NFRs impactados (latencia, seguridad, concurrencia, etc.).
+3. Verificar en código: `select` Prisma (NFR-001), `$transaction` (NFR-008), `correlationId` (NFR-009), cobertura Jest dominio (NFR-010).
+4. Si nuevo endpoint CRUD: estimar p95 y documentar en PR si requiere índice BD.
+5. Reportes: streams o Bull si > 500 filas (NFR-002).
 
 ---
 
@@ -110,3 +120,13 @@ export default function () {
   check(res, { 'status 200': (r) => r.status === 200 });
 }
 ```
+
+---
+
+## Checklist de salida (revisión de PR)
+
+- [ ] NFR-001: sin `findMany` sin `select` en rutas calientes
+- [ ] NFR-009: middleware `correlationId` activo
+- [ ] NFR-007: sin PII en logs (cruzar con `security-ley164.mdc`)
+- [ ] NFR-010: `jest --coverage` dominio ≥ 80 % si tocó `domain/`
+- [ ] NFR-002: reportes con umbral 10 s documentado en test

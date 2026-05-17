@@ -1,0 +1,25 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc007_reportes_dpa — FSD-UC-007 Reportes DPA
+  actor TecnicoDPA
+  participant API as API SGAI
+  participant DOM as Reportes Service
+  participant Bull as Cola Bull
+  participant DB as PostgreSQL
+
+  TecnicoDPA->>API: POST /reportes { tipo, periodo, formato }
+  API->>API: Verificar rol TECNICO_DPA
+  API->>DOM: generarReporte(params)
+  DOM->>DB: COUNT filas estimadas
+  alt filas <= 500
+    DOM->>DOM: Generar PDF/Excel sync
+    DOM-->>API: stream archivo
+    API-->>TecnicoDPA: 200 attachment
+  else filas > 500
+    DOM->>Bull: Encolar job
+    Bull-->>DOM: jobId
+    DOM-->>API: { jobId, estado: GENERANDO }
+    API-->>TecnicoDPA: 202 Accepted
+    TecnicoDPA->>API: GET /reportes/:jobId
+    API-->>TecnicoDPA: 200 { estado: LISTO, urlDescarga }
+  end

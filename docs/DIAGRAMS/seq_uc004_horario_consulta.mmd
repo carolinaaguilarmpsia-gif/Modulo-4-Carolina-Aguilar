@@ -1,0 +1,16 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc004_horario_consulta — FSD-UC-004 Consulta de Horarios
+  actor Docente
+  participant API as API SGAI
+  participant DOM as GestionAcademica Service
+  participant DB as PostgreSQL
+
+  Docente->>API: GET /mi-horario?periodo=2026-I
+  API->>API: Verificar JWT (rol=DOCENTE)
+  API->>DOM: consultarHorario({ docenteId: jwt.userId, periodo })
+  DOM->>DB: SELECT asignaciones FROM asignacion_docente\nWHERE docente_id=:docenteId
+  DB-->>DOM: [{ materia, horario, aula, carga_horaria }]
+  DOM->>DOM: Verificar ultima_sincronizacion\n(banner si > 24h — modo degradado)
+  DOM-->>API: HorarioResult
+  API-->>Docente: 200 OK { asignaciones, ultimaSincronizacion }

@@ -1,0 +1,16 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc006_perfil_cv — FSD-UC-006 Perfil y CV Docente
+  actor Docente
+  participant API as API SGAI
+  participant DOM as GestionDocente Service
+  participant DB as PostgreSQL
+
+  Docente->>API: PATCH /perfil-docente { seccion, data }
+  API->>API: jwt.userId === docente objetivo
+  API->>DOM: actualizarSeccion({ docenteId, seccion, data })
+  DOM->>DOM: Validar schema Zod
+  DOM->>DB: UPSERT perfil_docente
+  DB-->>DOM: perfil actualizado
+  DOM-->>API: PerfilDocente
+  API-->>Docente: 200 OK { perfil, updatedAt }

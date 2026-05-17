@@ -95,7 +95,11 @@ El valor diferencial técnico radica en las reglas de negocio embebidas en el do
 | T-007 | Implementar adaptador de integración con sistema de nómina | FSD-UC-005 | T-002 | PR-FSD-007 | Pendiente |
 | T-008 | Implementar adaptador de integración con sistema institucional | FSD-UC-004 | T-002 | PR-FSD-008 | Pendiente |
 | T-009 | Implementar servicio de notificaciones SMTP | FSD-UC-002, FSD-UC-003 | T-003 | PR-FSD-009 | Pendiente |
-| T-010 | Implementar generador de reportes PDF/Excel | FSD-UC-008 | T-006 | PR-FSD-010 | Pendiente |
+| T-010 | Implementar generador de reportes PDF/Excel | FSD-UC-007 | T-006 | PR-FSD-UC-007 | Pendiente |
+| T-011 | Implementar perfil CV docente (Zod + UPSERT) | FSD-UC-006 | T-003 | PR-FSD-UC-006 | Pendiente |
+| T-012 | Implementar calendario académico por facultad | FSD-UC-008 | T-003 | PR-FSD-UC-008 | Pendiente |
+| T-013 | Implementar gestión de roles institucionales | FSD-UC-009 | T-003 | PR-FSD-UC-009 | Pendiente |
+| T-014 | Implementar administración usuarios y materias | FSD-UC-010 | T-003 | PR-FSD-UC-010 | Pendiente |
 
 ---
 
@@ -301,6 +305,168 @@ Dado un Administrador de Facultad autenticado
 Cuando intenta acceder a las boletas de cualquier docente vía URL directa
 Entonces el sistema retorna HTTP 403 "Acceso no autorizado"
 ```
+
+---
+
+### 4.6 FSD-UC-006 — Gestión de Perfil y CV Docente
+
+- **Trazabilidad:** MRD-N-01, PRD-REQ-002, PRD-US-013, BR-013
+- **Actor principal:** Docente (edición); Administrador del Sistema (solo lectura)
+- **Precondiciones:** Docente autenticado; perfil puede no existir aún (se crea en primer PATCH).
+- **Disparador:** El docente accede a "Mi Perfil" y edita una sección del CV.
+- **Flujo principal:**
+  1. El docente selecciona la sección (`formacion_academica`, `publicaciones` o `experiencia_docente`).
+  2. El sistema valida el JSON de la sección con schema Zod.
+  3. El sistema hace UPSERT en `PERFIL_DOCENTE` y actualiza `updated_at`.
+  4. El sistema retorna el perfil actualizado.
+- **Flujos alternativos:**
+  - **A1:** Schema inválido → HTTP 422 con detalle de campos.
+  - **A2:** Docente intenta editar perfil ajeno → HTTP 403.
+- **Reglas de negocio:** RB-04 (solo titular edita); Ley 164 (no loggear contenido del CV).
+- **Diagrama:** `docs/DIAGRAMS/seq_uc006_perfil_cv.mmd`
+
+```gherkin
+Dado un docente autenticado con perfil existente
+Cuando actualiza la sección formacion_academica con JSON válido
+Entonces el sistema persiste los cambios y retorna updated_at en < 2 segundos
+
+Dado un docente autenticado
+Cuando intenta PATCH /perfil-docente/:otroDocenteId
+Entonces el sistema retorna HTTP 403 FORBIDDEN_PROFILE_EDIT
+```
+
+---
+
+### 4.7 FSD-UC-007 — Generación de Reportes DPA
+
+- **Trazabilidad:** MRD-N-06, PRD-REQ-009, PRD-US-009, BR-012, NFR-002
+- **Actor principal:** Técnico DPA; Administrador del Sistema
+- **Precondiciones:** Usuario con rol `TECNICO_DPA` o `ADMIN_SISTEMA`; datos del período disponibles en BD.
+- **Disparador:** El actor solicita un reporte consolidado (oferta, DJ, docentes o asignaciones).
+- **Flujo principal:**
+  1. El sistema valida rol y parámetros (`tipo`, `periodo`, `formato`).
+  2. El sistema estima filas con COUNT.
+  3. Si ≤ 500 filas: genera PDF/Excel síncrono y retorna stream.
+  4. Si > 500 filas: encola job en Bull y retorna `jobId` con estado `GENERANDO`.
+  5. El cliente consulta `GET /reportes/:jobId` hasta estado `LISTO` y descarga.
+- **Flujos alternativos:**
+  - **A1:** Sin datos para el período → reporte vacío estructurado (HTTP 200).
+  - **A2:** Rol no autorizado → HTTP 403.
+- **Reglas de negocio:** No incluir montos de boletas en reportes agregados (Ley 164).
+- **Diagrama:** `docs/DIAGRAMS/seq_uc007_reportes_dpa.mmd`
+
+```gherkin
+Dado un técnico DPA autenticado
+Cuando solicita reporte OFERTA_POR_FACULTAD período 2026-I formato PDF con 120 filas
+Entonces el sistema entrega el archivo en < 10 segundos
+
+Dado un docente autenticado
+Cuando solicita POST /reportes
+Entonces el sistema retorna HTTP 403 FORBIDDEN_REPORTS_ACCESS
+```
+
+---
+
+### 4.8 FSD-UC-008 — Gestión y Consulta de Calendario Académico
+
+- **Trazabilidad:** MRD-N-03, PRD-REQ-007, PRD-US-012, BR-004
+- **Actor principal:** Administrador de Facultad (publicación); Docente (consulta)
+- **Precondiciones:** Período académico configurado; Admin. Facultad con `facultad_id` en JWT.
+- **Disparador:** Publicación o consulta de eventos del calendario.
+- **Flujo principal (publicación):**
+  1. Admin. Facultad define eventos (`INICIO_SEMESTRE`, `EXAMENES`, etc.) con fechas válidas.
+  2. El sistema valida `fecha_fin >= fecha_inicio` y UPSERT en `CALENDARIO_ACADEMICO`.
+  3. Los docentes consultan calendario de su facultad + calendario institucional fusionados.
+- **Flujos alternativos:**
+  - **A1:** Admin. Facultad publica en otra facultad → HTTP 403 `CROSS_FACULTY_FORBIDDEN`.
+  - **A2:** Fechas incoherentes → HTTP 422.
+- **Diagrama:** `docs/DIAGRAMS/seq_uc008_calendario.mmd`
+
+```gherkin
+Dado un administrador de facultad autenticado de la facultad F1
+Cuando publica el calendario 2026-I para F1 con eventos válidos
+Entonces los docentes de F1 ven los eventos ordenados por fecha_inicio
+
+Dado un administrador de facultad de F1
+Cuando intenta publicar calendario para facultad F2
+Entonces el sistema retorna HTTP 403 CROSS_FACULTY_FORBIDDEN
+```
+
+---
+
+### 4.9 FSD-UC-009 — Gestión de Roles Institucionales de Docentes
+
+- **Trazabilidad:** MRD-N-08, PRD-REQ-011, PRD-US-016, BR-008, RB-05
+- **Actor principal:** Administrador de Facultad; Administrador del Sistema
+- **Precondiciones:** Docente objetivo existe; actor con permisos de gestión de roles.
+- **Disparador:** Asignación o revocación de rol institucional (`AUTORIDAD`, `INVESTIGADOR`, `ADMINISTRATIVO`).
+- **Flujo principal:**
+  1. El sistema recupera el docente objetivo.
+  2. Si actor es `ADMIN_FACULTAD`: verifica misma `facultad_id` (RB-05).
+  3. El sistema actualiza `rol_institucional` e inserta log de auditoría en la misma transacción.
+- **Flujos alternativos:**
+  - **A1:** Docente de otra facultad → HTTP 403.
+  - **A2:** Rol inválido → HTTP 422.
+- **Diagrama:** `docs/DIAGRAMS/seq_uc009_roles_docente.mmd`
+
+```gherkin
+Dado un administrador de facultad de la facultad F1
+Cuando asigna rol INVESTIGADOR a un docente de F1
+Entonces el rol queda persistido y el log de auditoría registra actor y timestamp
+
+Dado un administrador de facultad de F1
+Cuando intenta asignar rol a docente de F2
+Entonces el sistema retorna HTTP 403 CROSS_FACULTY_FORBIDDEN
+```
+
+---
+
+### 4.10 FSD-UC-010 — Administración de Usuarios y Materias
+
+- **Trazabilidad:** MRD-N-10, PRD-REQ-001, PRD-REQ-011, PRD-US-014, PRD-US-015, BR-011
+- **Actor principal:** Administrador del Sistema
+- **Precondiciones:** Actor con rol `ADMIN_SISTEMA`.
+- **Disparador:** Creación de cuenta, actualización de usuario o configuración de materia/carrera.
+- **Flujo principal (crear usuario):**
+  1. Validar schema Zod (email institucional único, rol, facultad).
+  2. Generar contraseña temporal; hashear con bcrypt (cost 12).
+  3. INSERT usuario; encolar email de bienvenida; registrar auditoría.
+  4. Retornar `userId` y email (sin password en respuesta ni logs).
+- **Flujo principal (crear materia):**
+  1. Validar código único por carrera y cargas horarias > 0.
+  2. INSERT materia; registrar auditoría.
+- **Flujos alternativos:**
+  - **A1:** Email duplicado → HTTP 422.
+  - **A2:** Actor sin rol Admin. Sistema → HTTP 403.
+- **Diagrama:** `docs/DIAGRAMS/seq_uc010_admin_usuarios.mmd`
+
+```gherkin
+Dado un administrador del sistema autenticado
+Cuando crea un usuario con email institucional único y datos válidos
+Entonces el sistema retorna 201 con userId y encola notificación de bienvenida
+
+Dado un administrador del sistema
+Cuando crea materia con código duplicado en la misma carrera
+Entonces el sistema retorna HTTP 422 DUPLICATE_SUBJECT_CODE
+```
+
+---
+
+### 4.11 Mapa de Casos de Uso ↔ Diagramas
+
+| FSD-UC | Tipo diagrama | Archivo `.mmd` |
+|--------|---------------|----------------|
+| FSD-UC-001 | Secuencia | `seq_uc001_autenticacion.mmd` |
+| FSD-UC-002 | Secuencia + Estado | `seq_uc002_dj_envio.mmd`, `state_dj.mmd` |
+| FSD-UC-003 | Secuencia + Estado | `seq_uc003_oferta_envio_dpa.mmd`, `state_oferta_academica.mmd` |
+| FSD-UC-004 | Secuencia | `seq_uc004_horario_consulta.mmd` |
+| FSD-UC-005 | Secuencia | `seq_uc005_boleta_consulta.mmd` |
+| FSD-UC-006 | Secuencia | `seq_uc006_perfil_cv.mmd` |
+| FSD-UC-007 | Secuencia | `seq_uc007_reportes_dpa.mmd` |
+| FSD-UC-008 | Secuencia | `seq_uc008_calendario.mmd` |
+| FSD-UC-009 | Secuencia | `seq_uc009_roles_docente.mmd` |
+| FSD-UC-010 | Secuencia | `seq_uc010_admin_usuarios.mmd` |
+| Transversal | ER + C4 + Gantt + Sync | `er_sgai_core.mmd`, `c4_cont_sgai_v1.mmd`, `gantt_roadmap_v1.mmd`, `seq_sync_legados.mmd` |
 
 ---
 
@@ -583,7 +749,35 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 8. Integraciones Externas 🔧
+## 8. Contratos de API REST 🔧
+
+> Convenciones: prefijo `/api/v1`; autenticación `Authorization: Bearer <JWT>` salvo `/auth/login`; respuestas de error incluyen `correlationId`.
+
+| Método | Endpoint | FSD-UC | Rol(es) | Request (resumen) | Response éxito |
+|--------|----------|--------|---------|-------------------|----------------|
+| POST | `/auth/login` | UC-001 | Público | `{ email, password }` | `200 { token, rol, facultadId, expiresIn }` |
+| GET | `/declaraciones-juradas` | UC-002 | DOCENTE, ADMIN_FACULTAD, TECNICO_DPA | Query: `estado?, page` | `200 { items[], total }` |
+| POST | `/declaraciones-juradas` | UC-002 | DOCENTE | `{ tipo, periodoAcademico, camposFormulario }` | `201 { id, estado: BORRADOR }` |
+| PATCH | `/declaraciones-juradas/:id/estado` | UC-002 | Según comando | `{ comando, observaciones? }` | `200 { id, estadoNuevo, historialId }` |
+| POST | `/oferta-academica` | UC-003 | ADMIN_FACULTAD | `{ periodoAcademico, asignaciones[] }` | `201 { id, estado }` |
+| PATCH | `/oferta-academica/:id/estado` | UC-003 | ADMIN_FACULTAD, TECNICO_DPA | `{ comando, observaciones? }` | `200 { id, estadoNuevo }` |
+| GET | `/mi-horario` | UC-004 | DOCENTE | Query: `periodo?` | `200 { asignaciones[], ultimaSincronizacion }` |
+| GET | `/boletas-pago` | UC-005 | DOCENTE | Query: `periodo?` | `200 { boletas[] }` — docenteId solo del JWT |
+| GET | `/perfil-docente` | UC-006 | DOCENTE, ADMIN_SISTEMA | — | `200 { perfil }` |
+| PATCH | `/perfil-docente` | UC-006 | DOCENTE | `{ seccion, data }` | `200 { perfil, updatedAt }` |
+| POST | `/reportes` | UC-007 | TECNICO_DPA, ADMIN_SISTEMA | `{ tipo, periodo, formato }` | `200 stream` o `202 { jobId }` |
+| GET | `/reportes/:jobId` | UC-007 | TECNICO_DPA, ADMIN_SISTEMA | — | `200 { estado, urlDescarga? }` |
+| GET | `/calendario-academico` | UC-008 | DOCENTE | Query: `periodo` | `200 { eventos[] }` |
+| PUT | `/calendario-academico` | UC-008 | ADMIN_FACULTAD, ADMIN_SISTEMA | `{ periodo, eventos[] }` | `200 { calendario }` |
+| PATCH | `/admin/docentes/:id/rol-institucional` | UC-009 | ADMIN_FACULTAD, ADMIN_SISTEMA | `{ rolInstitucional }` | `200 { docenteId, rolNuevo }` |
+| POST | `/admin/usuarios` | UC-010 | ADMIN_SISTEMA | `{ nombre, apellido, email, rol, facultadId }` | `201 { userId, email }` |
+| POST | `/admin/materias` | UC-010 | ADMIN_SISTEMA | `{ nombre, codigo, carreraId, cargaHorariaTeoria, cargaHorariaPractica }` | `201 { id, codigo }` |
+
+**Códigos de error estándar:** `401` auth; `403` dominio (RB-04, RB-05, etc.); `422` validación Zod; `429` bloqueo cuenta (RB-07); `500` con `correlationId` sin detalle técnico en producción.
+
+---
+
+## 9. Integraciones Externas 🔧
 
 | Sistema | Tipo | Protocolo | Operaciones | SLA esperado | Autenticación |
 |---------|------|-----------|-------------|--------------|---------------|
@@ -596,7 +790,7 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 9. Interfaces de Usuario (Referencia) ⚡🔧
+## 10. Interfaces de Usuario (Referencia) ⚡🔧
 
 | Pantalla | Caso de uso cubierto |
 |----------|----------------------|
@@ -616,7 +810,7 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 | `/admin/materias` | PRD-US-015 |
 | `/reportes` | PRD-US-009 |
 
-### 9.1 Trazabilidad con M2 (UI/UX) ⚡🔧
+### 10.1 Trazabilidad con M2 (UI/UX) ⚡🔧
 
 | Wireframe / mockup M2 | Pantalla FSD | Caso de uso (FSD-UC) | Estado de la traza |
 |-----------------------|--------------|----------------------|---------------------|
@@ -631,9 +825,11 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 10. Requerimientos No Funcionales (NFR) ⚡🔧
+## 11. Requerimientos No Funcionales (NFR) ⚡🔧
 
-| ID | Categoría | Requisito | Métrica | Umbral | Cómo se verifica |
+### 11.1 Tabla NFR cuantificable (ISO/IEC 25010)
+
+| ID | Característica ISO 25010 | Requisito | Métrica | Umbral | Cómo se verifica |
 |----|-----------|-----------|---------|--------|------------------|
 | NFR-001 | Rendimiento | Latencia de operaciones CRUD principales | p95 | < 2 s | Prueba de carga con k6 |
 | NFR-002 | Rendimiento | Generación de reportes PDF/Excel | tiempo máximo | < 10 s | Prueba funcional automatizada |
@@ -644,26 +840,34 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 | NFR-007 | Cumplimiento | Protección de datos personales — Ley 164 Bolivia | aplicable | 100 % cumplimiento | Revisión legal + auditoría |
 | NFR-008 | Escalabilidad | Usuarios concurrentes soportados | número | ≥ 200 simultáneos | Prueba de estrés k6 |
 | NFR-009 | Observabilidad | Trazabilidad de requests con correlationId | % de requests | 100 % | Revisión de logs en producción |
-| NFR-010 | Mantenibilidad | Cobertura de tests unitarios en dominio core | % | ≥ 80 % | Reporte de Jest/Vitest en CI |
+| NFR-010 | Mantenibilidad — Testeabilidad | Cobertura de tests unitarios en dominio core | % líneas | ≥ 80 % | Reporte de Jest/Vitest en CI |
+
+**Cobertura ISO 25010 (8 características):** Rendimiento (NFR-001, 002, 008), Fiabilidad/Disponibilidad (NFR-003), Seguridad (NFR-004, 005, 006), Cumplimiento (NFR-007), Mantenibilidad/Observabilidad (NFR-009, 010).
 
 ---
 
-## 11. Trazabilidad MRD → PRD → FSD ⚡🔧
+## 12. Trazabilidad MRD → PRD → FSD ⚡🔧
 
-| BRD (req. negocio) | PRD (requerimiento) | FSD (caso de uso) | NFR | Prueba de aceptación |
-|--------------------|---------------------|-------------------|-----|----------------------|
-| BR-001 | PRD-REQ-002 | FSD-UC-002 | NFR-004 | TC-001: DJ con vinculación inactiva |
-| BR-002 | PRD-REQ-003 | FSD-UC-003 | NFR-009 | TC-002: Flujo oferta completo E2E |
-| BR-003 | PRD-REQ-004 | FSD-UC-002 | — | TC-003: Edición DJ aprobada → 403 |
-| BR-005 | PRD-REQ-006 | FSD-UC-005 | NFR-004 | TC-004: Acceso boleta propia vs. ajena |
-| BR-009 | PRD-REQ-006 | FSD-UC-005 | NFR-001 | TC-005: Sincronización boletas ≤ 24 h |
-| BR-010 | PRD-REQ-007 | FSD-UC-004 | NFR-001 | TC-006: Horarios sincronizados correctamente |
-| BR-011 | PRD-REQ-001, PRD-REQ-011 | FSD-UC-001 | NFR-005, NFR-006 | TC-007: Autenticación y control de acceso por rol |
-| BR-012 | PRD-REQ-009 | PRD-US-009 | NFR-002 | TC-008: Generación de reporte PDF ≤ 10 s |
+| MRD | PRD | FSD-UC | NFR | TC |
+|-----|-----|--------|-----|-----|
+| MRD-N-01 | PRD-REQ-002, PRD-US-001–005 | FSD-UC-002 | NFR-004, NFR-009 | TC-001, TC-003 |
+| MRD-N-02 | PRD-REQ-003, PRD-US-006–008 | FSD-UC-003 | NFR-001, NFR-009 | TC-002 |
+| MRD-N-03 | PRD-REQ-007, PRD-US-010, PRD-US-012 | FSD-UC-004, FSD-UC-008 | NFR-001 | TC-006, TC-009 |
+| MRD-N-04 | PRD-REQ-006, PRD-US-011 | FSD-UC-005 | NFR-004 | TC-004, TC-005 |
+| MRD-N-05 | PRD-REQ-007 | FSD-UC-004 | NFR-001 | TC-006 |
+| MRD-N-06 | PRD-REQ-009, PRD-US-009 | FSD-UC-007 | NFR-002 | TC-008 |
+| MRD-N-07 | PRD-NFR-004–007 | FSD-UC-001, UC-005 | NFR-004–007 | TC-007 |
+| MRD-N-08 | PRD-REQ-011, PRD-US-016 | FSD-UC-009 | — | TC-010 |
+| MRD-N-09 | PRD-NFR-008 | Todos (carga) | NFR-008 | k6 stress |
+| MRD-N-10 | PRD-REQ-001, PRD-US-014–015 | FSD-UC-010 | NFR-010 | TC-011 |
+| — | PRD-REQ-010 | FSD-UC-002, UC-003 | NFR-009 | Historial E2E |
+| — | PRD-US-013 | FSD-UC-006 | NFR-004 | TC-012 perfil CV |
+
+> Matriz extendida BRD ↔ MRD ↔ PRD: `docs/TRAZABILIDAD_COMPLETA.md`
 
 ---
 
-## 12. Plan de Pruebas Funcionales 🔧
+## 13. Plan de Pruebas Funcionales 🔧
 
 **Estrategia:**
 - **Unitarias:** Servicios de dominio (máquinas de estado DJ y Oferta Académica, validaciones de reglas de negocio). Herramienta: Jest.
@@ -678,7 +882,7 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 13. Riesgos Funcionales ⚡🔧
+## 14. Riesgos Funcionales ⚡🔧
 
 | Riesgo | Probabilidad | Impacto | Mitigación | Responsable |
 |--------|--------------|---------|------------|-------------|
@@ -690,7 +894,7 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 14. Glosario 🔧
+## 15. Glosario 🔧
 
 | Término | Definición |
 |---------|------------|
@@ -705,11 +909,26 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 
 ---
 
-## 15. Registro de Cambios ⚡🔧
+## 16. Anexos 🔧
+
+| Anexo | Contenido | Ubicación |
+|-------|-----------|-----------|
+| A | Diagramas Mermaid (16 archivos) | `docs/DIAGRAMS/*.mmd` |
+| B | Prompt-contracts (10 UC) | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` §3 |
+| C | Matriz de trazabilidad completa | `docs/TRAZABILIDAD_COMPLETA.md` |
+| D | Métricas AI-SDLC | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` §1 |
+| E | Cumplimiento rúbrica Módulo 4 | `docs/ENTREGA_MODULO4_CUMPLIMIENTO.md` |
+
+**Inventario de elementos FSD (≥ 30):** 10 casos de uso · 7 reglas RB · 12 bloques Gherkin · 16 endpoints API · 10 NFR · 14 tasks · 7 actores · ER + diccionario · 10 prompt-contratos · 5 riesgos · 8 términos glosario · 5 anexos = **94 elementos documentados**.
+
+---
+
+## 17. Registro de Cambios ⚡🔧
 
 | Versión | Fecha | Autor | Cambio |
 |---------|-------|-------|--------|
-| v1.0 | 10/05/2026 | Equipo SGAI | Versión inicial del FSD — 5 casos de uso, modelo ER completo, 3 prompt-contratos, 10 NFRs, trazabilidad completa |
+| v1.0 | 10/05/2026 | Equipo SGAI | Versión inicial — 5 casos de uso, modelo ER, 3 prompt-contratos, 10 NFRs |
+| v1.1 | 17/05/2026 | Carolina Aguilar | +5 UC (006–010), contratos API §8, 6 diagramas secuencia, trazabilidad MRD→PRD→FSD, mapa UC↔diagramas |
 
 ---
 
@@ -719,15 +938,17 @@ Failure modes: 403 (acceso a boletas ajenas), 404 (sin boletas para el período)
 - [x] §1 Resumen ejecutivo (150–250 palabras).
 - [x] §2 Alcance y fuera de alcance + §2.4 Plan técnico + §2.5 Tasks (10 tasks).
 - [x] §3 Actores y permisos (7 actores).
-- [x] ≥ 3 casos de uso críticos (5 casos) con flujos principal, alternativos, datos y Gherkin.
+- [x] ≥ 10 casos de uso críticos con flujo principal, alternos y Gherkin verificables (10 UC — §4).
 - [x] §5 Reglas de negocio con tipo y origen (7 reglas).
 - [x] §6 Modelo de datos completo (diagrama Mermaid + diccionario).
-- [x] 3 prompt-contratos con los 6 elementos de la anatomía (§7).
-- [x] §8 Integraciones externas con SLA y autenticación.
-- [x] §9 + §9.1 Trazabilidad con M2 (Wireframe → Pantalla → UC).
-- [x] §10 NFRs con métrica, umbral y forma de verificación (10 NFRs).
-- [x] §11 Matriz de trazabilidad BRD → PRD → FSD → NFR → prueba.
-- [x] §12 Plan de pruebas detallado.
-- [x] §13 Riesgos funcionales (5 riesgos).
-- [x] §14 Glosario (8 términos).
-- [x] §15 Registro de cambios.
+- [x] 10 prompt-contratos con anatomía completa (§7 + PROMPT_MAPPINGS_v1).
+- [x] §8 Contratos API REST (16 endpoints).
+- [x] §9 Integraciones externas con SLA y autenticación.
+- [x] §10 + §10.1 Trazabilidad con M2 (Wireframe → Pantalla → UC).
+- [x] §11 NFRs ISO 25010 con métrica, umbral y verificación (10 NFRs, 8 características).
+- [x] §12 Matriz de trazabilidad MRD → PRD → FSD → NFR → prueba.
+- [x] §13 Plan de pruebas detallado.
+- [x] §14 Riesgos funcionales (5 riesgos).
+- [x] §15 Glosario (8 términos).
+- [x] §16 Anexos + inventario ≥ 30 elementos.
+- [x] §17 Registro de cambios.

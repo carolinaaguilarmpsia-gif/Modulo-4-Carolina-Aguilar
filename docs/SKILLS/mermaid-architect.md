@@ -4,12 +4,22 @@
 
 ---
 
+## Procedimiento de ejecución
+
+1. Identificar `FSD-UC-NNN` y tipo de diagrama (seq / state / er / gantt / c4).
+2. Crear o editar archivo en `docs/DIAGRAMS/<prefijo>_<nombre>.mmd`.
+3. Usar estados y roles **exactos** del dominio (ver `sgai-domain.mdc`).
+4. Referenciar desde FSD §4.11 y actualizar mapa UC ↔ diagrama.
+5. Validar sintaxis Mermaid (GitHub-compatible).
+
+---
+
 ## Identidad
 
 ```yaml
 skill_id: mermaid-architect
 versión: v1.0
-ubicación_diagramas: docs/diagrams/*.mmd
+ubicación_diagramas: docs/DIAGRAMS/*.mmd
 referencia: C4 Model (c4model.com) + FSD_v1.1.md §6
 ```
 
@@ -18,7 +28,7 @@ referencia: C4 Model (c4model.com) + FSD_v1.1.md §6
 ## MUST
 
 ```
-MUST guardar cada diagrama en docs/diagrams/<nombre>.mmd con extensión .mmd
+MUST guardar cada diagrama en docs/DIAGRAMS/<nombre>.mmd con extensión .mmd
 MUST nombrar archivos con snake_case y prefijo del tipo: seq_, state_, er_, gantt_, c4_
 MUST referenciar el diagrama desde el documento que lo usa con ruta relativa
 MUST usar los estados canónicos del dominio (BORRADOR, EN_REVISION_FACULTAD, etc.) — no inventar nombres

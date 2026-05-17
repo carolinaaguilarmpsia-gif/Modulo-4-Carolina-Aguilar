@@ -1,0 +1,24 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc008_calendario — FSD-UC-008 Calendario Académico
+  actor AdminFacultad as Admin. Facultad
+  actor Docente
+  participant API as API SGAI
+  participant DOM as Calendario Service
+  participant DB as PostgreSQL
+
+  AdminFacultad->>API: PUT /calendario-academico { periodo, eventos }
+  API->>API: jwt.facultadId === facultad objetivo
+  API->>DOM: publicarCalendario(eventos)
+  DOM->>DOM: Validar fechas Zod
+  DOM->>DB: UPSERT calendario_academico
+  DB-->>DOM: OK
+  DOM-->>API: calendario
+  API-->>AdminFacultad: 200 OK
+
+  Docente->>API: GET /calendario-academico?periodo=2026-I
+  API->>DOM: consultarCalendario(docente.facultadId)
+  DOM->>DB: SELECT eventos facultad + institucional
+  DB-->>DOM: eventos[]
+  DOM-->>API: eventos ordenados
+  API-->>Docente: 200 OK

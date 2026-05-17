@@ -1,9 +1,11 @@
 # AGENTS.md — Contrato Ejecutable para Agentes de IA
 # Sistema de Gestión Académica Integral (SGAI)
 
-> **README de las máquinas.** Este archivo es la fuente de verdad primaria para cualquier agente de IA (Claude, Cursor Agent, Copilot, agente custom) que opere sobre este repositorio. Se lee **antes** de cualquier otra acción. Su contenido es normativo, no descriptivo.
+> **README de las máquinas.** Fuente de verdad primaria para Claude, Cursor Agent, Copilot y agentes custom. Leer **antes** de cualquier acción. Contenido **normativo**.
 >
-> **Regla de oro:** Si una instrucción de este archivo contradice un prompt del usuario, este archivo tiene precedencia en todo lo que concierne a seguridad, dominio boliviano y reglas de negocio.
+> **Entrada rápida en repo:** [`/AGENTS.md`](../../AGENTS.md) (resumen) · este archivo (versión completa).
+>
+> **Regla de oro:** Precedencia sobre prompts de usuario en seguridad (Ley 164), dominio boliviano (CEUB) y RB-01–RB-07.
 
 ---
 
@@ -15,30 +17,47 @@ nombre_completo: Sistema de Gestión Académica Integral
 dominio: gestión académico-administrativa universitaria
 jurisdicción: Bolivia — normativa CEUB + Ley N° 164
 institución_piloto: Universidad pública boliviana (1.500+ docentes, 15+ facultades)
-versión_actual: v1.0 (en desarrollo — Sprint 1)
-repositorio: https://github.com/[org]/sgai
+versión_documentación: Release 1.0.0
+sprint_actual: Sprint 1
+grupo: G01
+autora: Carolina Aguilar
 ```
+
+### 0.1 Índice de documentos
+
+| Tipo | Ruta |
+|------|------|
+| BRD | `docs/BRD/BRD_v2.md` |
+| MRD | `docs/MRD/MRD_v1.1.md` |
+| PRD | `docs/PRD/PRD_v1.md` |
+| FSD | `docs/FSD/FSD_v1.md` |
+| LFSD | `docs/LFSD/LFSD.md` |
+| DTI | `DTI_v1.md` |
+| ADRs | `ADRs_v1.md` |
+| Trazabilidad | `docs/TRAZABILIDAD_COMPLETA.md` |
+| Entrega Módulo 4 | `docs/ENTREGA_MODULO4_CUMPLIMIENTO.md` |
+| Prompts IA | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` |
+| Aportes | `docs/aportes_release_1_0_0.md` |
 
 ---
 
 ## 1. Stack Tecnológico Canónico
 
-Todo agente que genere o modifique código en este repositorio DEBE usar exclusivamente el siguiente stack. No proponer alternativas sin una ADR aprobada.
+Todo agente DEBE usar exclusivamente este stack. Alternativas solo con ADR aprobada.
 
 ```yaml
 backend:
   runtime: Node.js 20 LTS
-  lenguaje: TypeScript 5.x (strict mode — NO any implícito)
+  lenguaje: TypeScript 5.x (strict — NO any implícito)
   framework: Express.js 4.x
   orm: Prisma 5.x
   base_de_datos: PostgreSQL 15
   cola_tareas: Bull 4.x + Redis 7
-  autenticación: JWT (jsonwebtoken) + bcrypt + integración LDAP
+  autenticación: JWT (jsonwebtoken) + bcrypt (cost ≥ 12) + LDAP
 
 frontend:
   framework: React 18
   bundler: Vite 5
-  lenguaje: TypeScript 5.x
   estilos: Tailwind CSS 3.x
 
 testing:
@@ -51,269 +70,268 @@ infraestructura:
   contenedores: Docker + Docker Compose
   proxy: Nginx 1.24+
   ci_cd: GitHub Actions
-  os_objetivo: Ubuntu 22.04 LTS (on-premise universitario)
+  os: Ubuntu 22.04 LTS (on-premise)
 
 diagramas:
-  formato: Mermaid (C4Context, C4Container, erDiagram, sequenceDiagram, stateDiagram-v2, gantt)
-  ubicación: docs/diagrams/*.mmd
+  formato: Mermaid
+  ubicación: docs/DIAGRAMS/*.mmd
 ```
 
 ---
 
-## 2. Arquitectura — Invariantes para Agentes
+## 2. Arquitectura — Invariantes
 
-### 2.1 Estructura de directorios (obligatoria)
+### 2.1 Estructura de directorios
 
 ```
 backend/
-├── domain/                    # Núcleo hexagonal — CERO dependencias externas
-│   ├── declaracion-jurada/    # Bounded context DJ
-│   ├── oferta-academica/      # Bounded context Oferta
-│   ├── gestion-docente/       # Bounded context Docente
-│   ├── gestion-academica/     # Bounded context Académico
-│   ├── informacion-financiera/# Bounded context Financiero
-│   ├── administracion/        # Bounded context Admin
-│   └── notificaciones/        # Bounded context Notificaciones
+├── domain/                    # Núcleo hexagonal — CERO frameworks
+│   ├── declaracion-jurada/    # FSD-UC-002
+│   ├── oferta-academica/      # FSD-UC-003
+│   ├── gestion-docente/       # FSD-UC-006, UC-009
+│   ├── gestion-academica/     # FSD-UC-004, UC-008
+│   ├── informacion-financiera/# FSD-UC-005
+│   ├── administracion/        # FSD-UC-001, UC-010
+│   ├── notificaciones/
+│   └── shared/                # errors, types compartidos
 ├── infrastructure/
-│   ├── persistence/           # Adaptadores Prisma
-│   ├── legacy-adapters/       # Adaptadores sistemas legados
-│   ├── smtp/                  # Adaptador SMTP
-│   └── auth/                  # JWT + LDAP
+│   ├── persistence/           # Prisma repositories
+│   ├── legacy-adapters/       # Nómina + SII
+│   ├── auth/                  # JWT + LDAP
+│   └── smtp/                  # Bull publisher
 └── api/
-    └── controllers/           # Adaptadores HTTP Express
+    ├── controllers/
+    ├── middleware/
+    └── routes/
 
-frontend/
-├── src/
-│   ├── pages/
-│   ├── components/
-│   └── services/
-
-docs/
-├── brd/         # BRD_v2.md
-├── mrd/         # MRD_v1.1.md
-├── prd/         # PRD_v1.1.md
-├── fsd/         # FSD_v1.1.md, LFSD.md
-├── adr/         # ADR_candidatas.md
-├── diagrams/    # *.mmd
-├── skills/      # Skills accionables
-├── aportes/     # release-*.md
-└── PROMPT_MAPPINGS.md
-
-.cursor/rules/   # Cursor rules del dominio
-AGENTS.md        # Este archivo
+frontend/src/{pages,components,services}
+docs/{BRD,MRD,PRD,FSD,SKILLS,DIAGRAMS,PROMPT_MAPPINGS,AGENTS}
+.cursor/rules/                 # Cursor (canónico)
+docs/.cursor/rules/            # Espejo documentación
+AGENTS.md                      # Entrada raíz
 ```
 
-### 2.2 Regla hexagonal (INVARIANTE — nunca violar)
+### 2.2 Regla hexagonal
 
 ```
-domain/ NO importa de infrastructure/, api/, Express, Prisma, Redis, ni ningún framework.
-La dirección de dependencias es: api/ → domain/ ← infrastructure/
+domain/ NO importa infrastructure/, api/, Express, Prisma, Redis, Bull.
+Dirección: api/ → domain/ ← infrastructure/
 ```
 
-Si un agente genera código en `domain/` con un `import` de `@prisma/client`, `express` o cualquier paquete de infraestructura, ese código es **inválido** y debe ser rechazado.
+Imports de `@prisma/client` o `express` en `domain/` → código **inválido**.
+
+### 2.3 Puertos y adaptadores (DTI §5)
+
+| Puerto (domain) | Adaptador (infrastructure/api) |
+|-----------------|--------------------------------|
+| `IDeclaracionJuradaRepository` | `PrismaDJRepository` |
+| `IOfertaAcademicaRepository` | `PrismaOfertaRepository` |
+| `IBoletaPagoRepository` | `PrismaBoletaRepository` |
+| `IAuditLogger` | `PrismaAuditLogger` |
+| `TransicionarDJUseCase` | `DJRestController` |
+| `ILegacyNominaAdapter` | `RestNominaAdapter` |
 
 ---
 
-## 3. Dominio de Negocio — Contexto Obligatorio
+## 3. Dominio de Negocio
 
-Todo agente DEBE conocer estos conceptos antes de generar código o documentación:
-
-### 3.1 Glosario del dominio
+### 3.1 Glosario
 
 ```yaml
-DJ: Declaración Jurada — documento obligatorio para docentes con vinculación activa
+DJ: Declaración Jurada
 DPA: Departamento de Planificación Académica
-CEUB: Comité Ejecutivo de la Universidad Boliviana — organismo rector
-vinculacion_activa: estado del docente con contrato vigente (campo booleano en BD)
-oferta_academica: planificación semestral/anual de materias + docentes + horarios
-periodo_academico: semestre o año académico (ej: "2026-I", "2026-II")
-facultad: unidad académica de la universidad (15+ en la institución piloto)
+CEUB: Comité Ejecutivo de la Universidad Boliviana
+vinculacion_activa: contrato vigente (boolean)
+oferta_academica: planificación semestral materias + docentes + horarios
+periodo_academico: "2026-I" | "2026-II"
+facultad: unidad académica (15+)
 ```
 
-### 3.2 Máquinas de estados críticas
+### 3.2 Máquinas de estado
 
-**Estados de Declaración Jurada (DJ):**
-```
-BORRADOR → EN_REVISION_FACULTAD → APROBADA
-                                 → DEVUELTA → (edición) → EN_REVISION_FACULTAD
-EN_REVISION_FACULTAD → EN_REVISION_DPA → APROBADA
-                                        → RECHAZADA
-```
+**DJ:** `BORRADOR` → `EN_REVISION_FACULTAD` → `APROBADA` | `DEVUELTA` | `EN_REVISION_DPA` → `APROBADA` | `RECHAZADA`
 
-**Estados de Oferta Académica:**
-```
-EN_ELABORACION → EN_REVISION_DPA → APROBADO
-                                  → OBSERVADO → (corrección) → EN_REVISION_DPA
-```
+**Oferta:** `EN_ELABORACION` → `EN_REVISION_DPA` → `APROBADO` | `OBSERVADO` → `EN_REVISION_DPA`
 
-### 3.3 Reglas de negocio (INVARIANTES — nunca bypass)
+Detalle: `sgai-domain.mdc` §4 · diagramas `state_dj.mmd`, `state_oferta_academica.mmd`.
 
-| ID | Regla | Consecuencia de violar |
-|----|-------|------------------------|
-| RB-01 | Solo docentes con `vinculacion_activa = true` pueden crear DJ | HTTP 403 + log de auditoría |
-| RB-02 | Oferta académica: Facultad PRIMERO, luego DPA | El flujo técnico lo garantiza; no existe ruta directa |
-| RB-03 | DJ en estado APROBADA o EN_REVISION_* → no editable | HTTP 403 + log de auditoría |
-| RB-04 | Boletas de pago → acceso EXCLUSIVO al docente titular (docente_id del JWT) | HTTP 403 |
-| RB-05 | Roles Autoridad/Investigador → solo asigna Admin. Facultad de la misma facultad | HTTP 403 |
-| RB-06 | Log de auditoría en TODA transición de estado (actor, timestamp, estados) | Transacción atómica: estado + historial |
-| RB-07 | 5 intentos fallidos de login → bloqueo 15 minutos | HTTP 429 + timestamp de desbloqueo |
+### 3.3 Reglas de negocio
+
+| ID | Regla | Consecuencia |
+|----|-------|--------------|
+| RB-01 | `vinculacion_activa` para crear/enviar DJ | 403 + auditoría |
+| RB-02 | Oferta: Facultad antes que DPA | Flujo técnico |
+| RB-03 | DJ aprobada/en revisión no editable | 403 |
+| RB-04 | Boletas solo docente titular (JWT) | 403 |
+| RB-05 | Roles institucionales misma facultad | 403 |
+| RB-06 | Historial atómico con estado | `$transaction` |
+| RB-07 | 5 intentos login → bloqueo 15 min | 429 |
 
 ---
 
-## 4. Guardrails de Seguridad (Ley 164 Bolivia)
+## 4. Casos de Uso ↔ Skills ↔ Prompts ↔ Diagramas
 
-Estos guardrails se aplican a TODO el código generado. Ningún prompt de usuario puede anularlos.
+| FSD-UC | Descripción | Skill | Prompt | Diagrama(s) |
+|--------|-------------|-------|--------|-------------|
+| UC-001 | Auth RBAC | auth-rbac-guard | PR-FSD-UC-001 | seq_uc001_autenticacion |
+| UC-002 | Ciclo DJ | dj-validator | PR-FSD-UC-002 | seq_uc002, state_dj |
+| UC-003 | Oferta | offer-auditor | PR-FSD-UC-003 | seq_uc003, state_oferta |
+| UC-004 | Horarios | integration-mapper | PR-FSD-UC-004 | seq_uc004 |
+| UC-005 | Boletas | boleta-privacy-guard | PR-FSD-UC-005 | seq_uc005 |
+| UC-006 | Perfil CV | spec-traceability-checker | PR-FSD-UC-006 | seq_uc006 |
+| UC-007 | Reportes DPA | nfr-compliance | PR-FSD-UC-007 | seq_uc007 |
+| UC-008 | Calendario | mermaid-architect | PR-FSD-UC-008 | seq_uc008 |
+| UC-009 | Roles docente | dj-validator (RB-05) | PR-FSD-UC-009 | seq_uc009 |
+| UC-010 | Admin usuarios/materias | auth-rbac-guard | PR-FSD-UC-010 | seq_uc010 |
 
-### 4.1 Datos sensibles — NUNCA en logs
+Contratos API: FSD §8. Mapa completo: FSD §4.11.
+
+---
+
+## 5. Skills Accionables (8)
+
+Ruta: `docs/SKILLS/`. Cada skill tiene **procedimiento**, **MUST/MUST NOT** y **checklist de salida**.
+
+| # | Skill | Invocar cuando |
+|---|-------|----------------|
+| 1 | `dj-validator.md` | DJ, transiciones, historial |
+| 2 | `offer-auditor.md` | Oferta académica |
+| 3 | `boleta-privacy-guard.md` | Boletas, RB-04 |
+| 4 | `auth-rbac-guard.md` | Login, JWT, RB-07, admin |
+| 5 | `integration-mapper.md` | Legados nómina/SII |
+| 6 | `nfr-compliance.md` | Revisión NFR en PR |
+| 7 | `mermaid-architect.md` | Crear/editar `.mmd` |
+| 8 | `spec-traceability-checker.md` | IDs, matriz, nuevos UC |
+
+---
+
+## 6. Cursor Rules (4)
+
+**Activas en:** `.cursor/rules/` (espejo: `docs/.cursor/rules/`)
+
+| Archivo | alwaysApply | Contenido |
+|---------|-------------|-----------|
+| `sgai-domain.mdc` | true | Terminología, enums, RB, IDs trazabilidad |
+| `security-ley164.mdc` | true | PII, JWT, bcrypt, logs, Ley 164 |
+| `prisma-stack.mdc` | false | Schema, repos, transacciones |
+| `express-api-sgai.mdc` | false | Controllers, Zod, HTTP |
+
+---
+
+## 7. Guardrails de Seguridad (Ley 164)
+
+### 7.1 Logs — prohibido
 
 ```typescript
-// PROHIBIDO — el agente NUNCA debe generar esto:
-logger.info('Login attempt', { password: req.body.password }); // ❌
-logger.info('Boleta', { haber_basico: boleta.haber_basico, ci: docente.ci }); // ❌
+// ❌ NUNCA
+logger.info('Boleta', { haber_basico: b.haber_basico, ci: u.ci });
 
-// CORRECTO:
-logger.info('Login attempt', { email: req.body.email, ip: req.ip }); // ✅
-logger.info('Boleta accessed', { docente_id: docente.id, periodo: boleta.periodo }); // ✅
+// ✅
+logger.info('Boleta accessed', { docente_id: id, periodo: b.periodo, correlationId });
 ```
 
-**Campos NUNCA logeados:** `password`, `password_hash`, `ci` (cédula de identidad), `haber_basico`, `descuentos`, `neto`, cualquier campo de BOLETA_PAGO salvo `id` y `periodo`.
+Campos prohibidos: `password`, `password_hash`, `ci`, `haber_basico`, `descuentos`, `neto`, `campos_formulario` completos.
 
-### 4.2 Validación de acceso a datos personales
+### 7.2 Acceso a datos personales
 
-Todo endpoint que retorne datos de un docente ESPECÍFICO debe verificar:
 ```typescript
-// OBLIGATORIO en cualquier endpoint de datos personales:
-if (req.user.rol === Rol.DOCENTE && req.user.userId !== params.docenteId) {
-  throw new ForbiddenError('Acceso no autorizado a datos ajenos'); // HTTP 403
+if (req.user.rol === Rol.DOCENTE && req.user.userId !== targetDocenteId) {
+  throw new ForbiddenError('UNAUTHORIZED_DATA_ACCESS');
 }
 ```
 
-### 4.3 Cifrado
+Boletas: `docenteId` **solo** de `req.user.userId`.
 
-- Datos en reposo (PII, financieros): AES-256 — configurado a nivel de PostgreSQL y/o aplicación.
-- Datos en tránsito: TLS 1.2+ — configurado en Nginx.
-- Secretos: NUNCA en código; siempre en variables de entorno (`.env` está en `.gitignore`).
+### 7.3 Validación y secretos
 
-### 4.4 Inputs del usuario — siempre validar
+- Zod en `api/` antes del dominio.
+- Secretos en `.env` únicamente.
+- TLS 1.2+ en Nginx; AES-256 reposo para PII.
 
-```typescript
-// OBLIGATORIO — el agente siempre genera validación:
-import { z } from 'zod'; // o class-validator
-const schema = z.object({ ... }); // validación con schema antes de cualquier lógica
-```
+Detalle: `security-ley164.mdc`.
 
 ---
 
-## 5. Skills Disponibles
+## 8. Comportamiento del Agente
 
-Los siguientes skills están disponibles en `docs/skills/`. El agente los consulta cuando la tarea lo requiera:
+### 8.1 Pre-flight (obligatorio)
 
-| Skill | Archivo | Cuándo usarlo |
-|-------|---------|---------------|
-| DJ Validator | `docs/skills/dj-validator.md` | Generar o revisar lógica de DJ (máquina de estados, validaciones) |
-| Offer Auditor | `docs/skills/offer-auditor.md` | Generar o revisar lógica de Oferta Académica |
-| NFR Compliance | `docs/skills/nfr-compliance.md` | Verificar que el código cumple los NFRs del FSD |
-| Mermaid Architect | `docs/skills/mermaid-architect.md` | Generar o actualizar diagramas C4/Secuencia/Estado/ER |
-| Integration Mapper | `docs/skills/integration-mapper.md` | Generar adaptadores de sistemas legados |
+1. Leer este AGENTS.md.
+2. Identificar `FSD-UC-NNN` de la tarea.
+3. Abrir skill + `PR-FSD-UC-NNN` + cursor rules aplicables.
+4. Verificar guardrails §7 y hexagonal §2.
+5. Si documentación: `spec-traceability-checker.md`.
 
----
+### 8.2 Al generar código
 
-## 6. Cursor Rules Disponibles
+- TypeScript strict; errores de dominio tipados.
+- `correlationId` en logs.
+- JSDoc `@see FSD-UC-*`, `@see RB-*`.
+- Tests por regla de negocio afectada.
 
-```
-.cursor/rules/sgai-domain.mdc       — Jerga y lógica boliviana CEUB
-.cursor/rules/security-ley164.mdc   — Privacidad y cifrado Ley 164
-.cursor/rules/prisma-stack.mdc      — Convenciones de código y BD
-```
+### 8.3 Al generar documentación
 
----
+- Diagramas en `docs/DIAGRAMS/`.
+- Actualizar `TRAZABILIDAD_COMPLETA.md` si hay nuevo enlace.
+- No reutilizar IDs eliminados.
 
-## 7. Prompt-Contracts de Referencia
+### 8.4 Stop conditions
 
-Los prompt-contracts para los casos de uso críticos están en `docs/PROMPT_MAPPINGS.md`. Todo agente que implemente un caso de uso DEBE leer el prompt-contract correspondiente antes de generar código.
-
-| Caso de uso | Prompt-contract |
-|-------------|-----------------|
-| FSD-UC-001 (Auth) | PR-FSD-001 |
-| FSD-UC-002 (DJ) | PR-FSD-UC-002 |
-| FSD-UC-003 (Oferta) | PR-FSD-UC-003 |
-| FSD-UC-004 (Horarios) | PR-FSD-UC-004 |
-| FSD-UC-005 (Boletas) | PR-FSD-UC-005 |
-| FSD-UC-006 (Perfil CV) | PR-FSD-UC-006 |
-| FSD-UC-007 (Reportes DPA) | PR-FSD-UC-007 |
-| FSD-UC-008 (Calendario) | PR-FSD-UC-008 |
-| FSD-UC-009 (Roles) | PR-FSD-UC-009 |
-| FSD-UC-010 (Notificaciones) | PR-FSD-UC-010 |
+- Modificar legados (solo lectura).
+- Exponer boletas a no titular.
+- Loggear PII.
+- ADR faltante para decisión arquitectónica.
+- Dueño de entidad ambiguo entre bounded contexts.
 
 ---
 
-## 8. NFRs que el Código Generado Debe Respetar
+## 9. NFRs
 
-| NFR | Umbral | Cómo verificar en código |
-|-----|--------|--------------------------|
-| NFR-001 Latencia | p95 < 2 s | Evitar N+1 queries; usar `select` específico en Prisma |
-| NFR-004 Cifrado reposo | AES-256 | Campos PII marcados en schema Prisma con `@encrypted` o handled en app |
-| NFR-005 Cifrado tránsito | TLS 1.2+ | Configuración Nginx — no en código de app |
-| NFR-007 Ley 164 | 100 % | Guardrails §4 de este archivo |
-| NFR-008 Concurrencia | ≥ 200 usuarios | Transacciones Prisma atómicas; sin locks globales |
-| NFR-009 CorrelationId | 100 % requests | Middleware `correlationId` en cada request |
-| NFR-010 Cobertura tests | ≥ 80 % dominio | Verificar con Jest coverage report en CI |
+| NFR | Umbral | Verificación |
+|-----|--------|--------------|
+| NFR-001 | p95 < 2s | k6, `select` Prisma |
+| NFR-002 | reportes < 10s | Jest + cronómetro |
+| NFR-003 | uptime ≥ 99% | Uptime Robot |
+| NFR-004 | AES-256 | Auditoría BD |
+| NFR-005 | TLS 1.2+ | SSL Labs |
+| NFR-006 | sesión ≤ 8h | Test JWT |
+| NFR-007 | Ley 164 100% | Legal + OWASP |
+| NFR-008 | ≥ 200 VUs | k6 stress |
+| NFR-009 | correlationId 100% | Logs |
+| NFR-010 | cobertura dominio ≥ 80% | Jest CI |
 
----
-
-## 9. Comportamiento Esperado del Agente
-
-### 9.1 Antes de generar código
-
-1. Leer el skill relevante de `docs/skills/` si existe.
-2. Leer el prompt-contract correspondiente de `docs/PROMPT_MAPPINGS.md`.
-3. Verificar que la tarea no viola ningún guardrail de §4.
-4. Verificar que la arquitectura respeta la regla hexagonal de §2.2.
-
-### 9.2 Al generar código
-
-- Usar TypeScript strict; nunca `any` implícito.
-- Incluir tipos explícitos en todas las funciones públicas.
-- Incluir manejo de errores con tipos de error del dominio (`DomainError`, `ForbiddenError`, `NotFoundError`, `ValidationError`).
-- Incluir `correlationId` en todo log.
-- No hardcodear secretos, URLs ni credenciales.
-
-### 9.3 Al generar documentación
-
-- Mantener trazabilidad: toda user story referencia un BR-*, todo UC referencia un PRD-REQ-*.
-- Los diagramas Mermaid van en `docs/diagrams/*.mmd` y se referencian desde el documento que los usa.
-- Los IDs son secuenciales y no se reutilizan aunque se elimine un elemento.
-
-### 9.4 Stop conditions (el agente SE DETIENE y pregunta)
-
-- La tarea requiere modificar un sistema legado (viola RES-03).
-- La tarea requiere exponer datos de boletas de pago a un rol que no sea DOCENTE titular.
-- La tarea requiere loggear datos de los campos prohibidos en §4.1.
-- La tarea implica una decisión arquitectónica significativa no cubierta por las ADRs existentes.
-- El contexto es ambiguo respecto a qué bounded context es el dueño de una entidad.
+Skill: `nfr-compliance.md` · FSD §11.
 
 ---
 
-## 10. Trazabilidad de Documentos
+## 10. Métricas AI-SDLC
+
+| Métrica | Valor | Umbral |
+|---------|-------|--------|
+| Prompt Coverage | 10/10 = 100% | ≥ 80% |
+| Spec Fidelity | ~92% | ≥ 90% |
+| Hallucination Rate | < 4% | ≤ 5% |
+| Reversion Rate | ~8% | ≤ 10% |
+
+Fuente: `PROMPT_MAPPINGS_v1.md` §1.
+
+---
+
+## 11. Trazabilidad
 
 ```
-01_vision_negocio.txt
-  └── BRD_v2.md
-        ├── MRD_v1.1.md
-        ├── PRD_v1.1.md
-        │     └── FSD_v1.1.md
-        │           ├── LFSD.md
-        │           ├── docs/diagrams/*.mmd
-        │           └── docs/PROMPT_MAPPINGS.md
-        └── DTI_borrador.md
-              ├── C4_nivel_1.md
-              └── ADR_candidatas.md
+Visión → BRD_v2 → MRD_v1.1 → PRD_v1 → FSD_v1
+              ↓ PROMPT_MAPPINGS_v1 · DIAGRAMS · SKILLS
+              ↓ DTI_v1 · ADRs_v1 → implementación backend/
 ```
+
+Matriz: `docs/TRAZABILIDAD_COMPLETA.md`.
 
 ---
 
-## 11. Registro de Cambios de AGENTS.md
+## 12. Registro de cambios
 
 | Versión | Fecha | Cambio |
 |---------|-------|--------|
-| v1.0 | 10/05/2026 | Versión inicial — identidad, stack, guardrails, skills, cursor rules, prompt-contracts |
+| v1.0 | 10/05/2026 | Versión inicial |
+| v1.1 | 17/05/2026 | 10 UC, 8 skills con procedimientos, 4 cursor rules, rutas corregidas, índice documentos, métricas AI-SDLC |

@@ -1,0 +1,63 @@
+---
+description: >
+  Convenciones de la capa API Express del SGAI: controllers delgados, Zod,
+  middleware JWT/RBAC, correlationId y mapeo de DomainError a HTTP. Solo backend/api/.
+globs:
+  - "backend/api/**/*.ts"
+  - "api/**/*.ts"
+alwaysApply: false
+owner: Carolina Aguilar — G01
+status: stable
+fsd-version-min: v1.1
+---
+
+# express-api-sgai — Capa HTTP REST
+
+## 1. Flujo obligatorio por request
+
+```
+correlationId → authenticate → requireRole → validateBody(schema) → controller → useCase
+```
+
+- Controller: **≤ 15 líneas** — extrae JWT, llama use case, mapea resultado a HTTP.
+- **Sin** lógica de negocio ni Prisma en controllers.
+
+## 2. Plantilla de ruta
+
+```typescript
+router.patch(
+  '/declaraciones-juradas/:id/estado',
+  authenticate,
+  requireRole([Rol.ADMIN_FACULTAD, Rol.TECNICO_DPA, Rol.DOCENTE]),
+  validateBody(TransicionDJSchema),
+  (req, res, next) => djController.transicionar(req, res, next)
+);
+```
+
+## 3. Respuestas HTTP
+
+| Dominio | HTTP | Body |
+|---------|------|------|
+| Éxito | 200/201 | DTO sin PII |
+| ValidationError | 422 | `{ error, details, correlationId }` |
+| ForbiddenError | 403 | `{ error, message, correlationId }` |
+| NotFoundError | 404 | `{ error, correlationId }` |
+| UnauthorizedError | 401 | mensaje genérico login |
+| No controlado | 500 | `{ error: 'INTERNAL_ERROR', correlationId }` — sin stack |
+
+## 4. MUST / MUST NOT
+
+```
+MUST incluir x-correlation-id en respuesta
+MUST validar body con Zod antes del dominio
+MUST extraer actorId y facultadId del JWT — no del body en transiciones
+MUST usar globalErrorHandler con DomainError
+MUST NOT exponer err.message de Prisma o SQL al cliente
+MUST NOT poner docenteId de boletas en query params
+```
+
+## 5. Referencias
+
+- Contratos: `docs/FSD/FSD_v1.md` §8
+- Seguridad: `security-ley164.mdc`
+- Auth: `docs/SKILLS/auth-rbac-guard.md`

@@ -4,6 +4,17 @@
 
 ---
 
+## Procedimiento de ejecución
+
+1. Leer `PR-FSD-UC-003` y diagramas `seq_uc003_oferta_envio_dpa.mmd`, `state_oferta_academica.mmd`.
+2. Servicio de dominio en `domain/oferta-academica/` con `EstadoOferta` canónico.
+3. Antes de `ENVIAR_DPA`: validar todas las materias con `docente_id` (422 `UNASSIGNED_SUBJECTS`).
+4. Bloquear edición de facultad cuando `estado === EN_REVISION_DPA`.
+5. Transición + `HISTORIAL_OFERTA` en misma transacción (RB-06).
+6. Filtrar trámites por `facultad_id` del JWT para `ADMIN_FACULTAD`.
+
+---
+
 ## Identidad
 
 ```yaml
@@ -63,3 +74,12 @@ MUST NOT exponer asignaciones de otras facultades al Admin.Facultad autenticado
 | Observaciones requeridas | 422 | `OBSERVATIONS_REQUIRED` |
 | Transición inválida | 422 | `INVALID_STATE_TRANSITION` |
 | Error BD | 500 | `PERSISTENCE_ERROR` |
+
+---
+
+## Checklist de salida
+
+- [ ] RB-02 garantizado por flujo (no endpoint directo a DPA sin `EN_ELABORACION`)
+- [ ] Tests para `UNASSIGNED_SUBJECTS` y `OBSERVATIONS_REQUIRED`
+- [ ] `@see FSD-UC-003` en servicio público
+- [ ] Notificación asíncrona post-commit

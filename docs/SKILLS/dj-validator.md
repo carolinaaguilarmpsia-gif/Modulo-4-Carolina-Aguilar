@@ -4,6 +4,17 @@
 
 ---
 
+## Procedimiento de ejecución
+
+1. Leer `PR-FSD-UC-002` en `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md`.
+2. Implementar máquina de estados en `domain/declaracion-jurada/services/DJStateMachine.ts`.
+3. Persistencia vía `IDeclaracionJuradaRepository` — transición en **una** `$transaction` (estado + `HISTORIAL_DJ`).
+4. Validar RB-01 antes de `ENVIAR`; RB-03 en edición de campos; observaciones obligatorias en `DEVOLVER`/`RECHAZAR`.
+5. Encolar notificación Bull **después** de commit exitoso.
+6. Añadir tests unitarios por transición válida + al menos un 403/422 por regla.
+
+---
+
 ## Identidad del Skill
 
 ```yaml
@@ -128,3 +139,13 @@ describe('DeclaracionJuradaService.transicionar', () => {
   });
 });
 ```
+
+---
+
+## Checklist de salida
+
+- [ ] Enum `EstadoDJ` y `ComandoDJ` alineados a `sgai-domain.mdc`
+- [ ] RB-01, RB-03, RB-06 cubiertos por tests
+- [ ] Sin `@prisma/client` en `domain/`
+- [ ] Diagrama `docs/DIAGRAMS/seq_uc002_dj_envio.mmd` coherente con el código
+- [ ] JSDoc `@see FSD-UC-002` en `transicionarEstado`

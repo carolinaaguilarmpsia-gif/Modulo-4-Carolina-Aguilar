@@ -352,7 +352,39 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 ---
 
-## 19. Aprobaciones
+## 19. Gobernanza del Proyecto
+
+### 19.1 Estructura de decisión
+
+| Nivel | Órgano / rol | Responsabilidad | Frecuencia |
+|-------|----------------|-----------------|------------|
+| Estratégico | Director DPA (Sponsor) | Aprobación de alcance, presupuesto y criterios de éxito | Mensual en comité de seguimiento |
+| Táctico | PM del proyecto + Líder técnico | Priorización de releases, gestión de riesgos, reporte de avance | Semanal (sprint review) |
+| Operativo | Equipo de desarrollo + Unidad de TI | Ejecución técnica, despliegue, soporte L2 | Diario (stand-up) |
+| Cumplimiento | Asesoría Legal + Unidad de TI | Validación Ley 164, CEUB y políticas de seguridad | Por hito (diseño, pre-go-live, anual) |
+
+### 19.2 Comités y ceremonias
+
+- **Comité de steering (mensual):** Sponsor, PM, Líder técnico, representante Unidad de TI. Aprueba cambios de alcance mayores y desvíos de presupuesto > 10 %.
+- **Revisión de producto (quincenal):** Demo de incrementos; validación con Admin. Facultad y Técnico DPA (usuarios clave).
+- **Revisión de arquitectura (por ADR):** Toda decisión significativa documentada en `ADRs_v1.md` antes de implementación.
+- **Gate de go-live:** Checklist obligatorio: NFRs verificados en staging, auditoría de permisos, capacitación completada, plan de rollback aprobado por TI.
+
+### 19.3 Gestión de cambios y calidad documental
+
+- Cambios a reglas de negocio (RB-*) requieren validación de Unidad Legal y actualización de BRD → MRD → PRD → FSD en la misma release.
+- Trazabilidad de IDs (BR-*, MRD-N-*, PRD-REQ-*, FSD-UC-*) es obligatoria en commits y PRs que toquen funcionalidad.
+- Métricas AI-SDLC (Prompt Coverage, Spec Fidelity, Hallucination Rate) se revisan quincenalmente en `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` §1.
+
+### 19.4 Política de datos y soberanía
+
+- Datos alojados en servidores on-premise de la universidad (Ley 164 — soberanía de datos).
+- Retención de logs de auditoría: 1 año (accesos sensibles); logs operativos: 90 días.
+- Responsable de protección de datos: Unidad de TI + Asesoría Legal (designados antes del go-live).
+
+---
+
+## 20. Aprobaciones
 
 | Rol | Nombre | Firma | Fecha |
 |-----|--------|-------|-------|
@@ -363,7 +395,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 ---
 
-## 20. Registro de Cambios
+## 21. Registro de Cambios
 
 | Versión | Fecha | Autor | Cambio |
 |---------|-------|-------|--------|
@@ -381,6 +413,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 - [x] Panorama competitivo con ≥ 3 alternativas (incluyendo do-nothing).
 - [x] Business Model Canvas con los 9 bloques poblados, ≥ 3 elementos por bloque.
 - [x] Métricas clave de éxito: 1 North Star + 4 KPIs de apoyo, con meta y horizonte.
+- [x] Gobernanza del proyecto (§19): comités, gestión de cambios, gate de go-live, política de datos.
 - [x] ≥ 5 objetivos de negocio SMART con líneas base explícitas.
 - [x] Matriz RACI completa (10 stakeholders).
 - [x] 14 requerimientos de negocio priorizados (MoSCoW).

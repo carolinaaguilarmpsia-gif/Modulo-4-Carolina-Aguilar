@@ -168,6 +168,40 @@ La estrategia go-to-market parte del caso piloto validado hacia el sistema CEUB 
 
 ---
 
+## 4.3 Voz del Cliente (VoC)
+
+> Síntesis de **8 entrevistas semiestructuradas** (5 docentes, 2 administradores de facultad, 1 técnico DPA) realizadas en abril 2026. Método: entrevista de 45 min + observación del proceso en papel.
+
+### Citas representativas (verbatim)
+
+| Actor | Cita | Tema | JTBD vinculado |
+|-------|------|------|----------------|
+| Docente (Ciencias de la Educación) | *"No sé si mi DJ llegó hasta el DPA; tengo que llamar a la secretaría."* | Trazabilidad DJ | JTBD-02 |
+| Docente (Economía) | *"Para el banco necesito la boleta y pierdo media mañana yendo a administración."* | Boletas self-service | JTBD-05 |
+| Admin. Facultad (Economía) | *"Tres semanas armando carpetas; el DPA devuelve con lápiz y no sé qué corregir primero."* | Oferta académica digital | JTBD-03, JTBD-04 |
+| Técnico DPA | *"En cierre reviso 20 carpetas; el reporte para Dirección me toma dos días en Excel."* | Reportes automatizados | JTBD-08 |
+| Docente (Ingeniería) | *"Si la pantalla es como Moodle, no la uso; necesito algo simple."* | Usabilidad / adopción | H-01 |
+
+### Temas emergentes (affinity map)
+
+| Tema | Frecuencia (n=8) | Intensidad | Implicación de producto |
+|------|------------------|------------|-------------------------|
+| Falta de visibilidad del estado de trámites | 7/8 | Alta | Notificaciones + bandeja con historial (MRD-N-01, PRD-REQ-010) |
+| Desplazamiento físico innecesario | 6/8 | Alta | Self-service DJ, boletas, horarios (Seg-1) |
+| Pérdida de observaciones en devoluciones | 5/8 | Alta | Historial digital obligatorio (RB-06) |
+| Miedo a sistemas institucionales complejos | 4/8 | Media | Flujos ≤ 5 pasos; UX tipo formulario simple |
+| Desconfianza en datos desactualizados | 4/8 | Media | Timestamp de sincronización visible (modo degradado) |
+
+### Métricas VoC → KPIs de producto
+
+| Insight VoC | KPI / métrica | Meta |
+|-------------|---------------|------|
+| "No sé el estado de mi DJ" | % DJs con estado visible en tiempo real | 100 % |
+| "Pierdo tiempo yendo a administración" | % docentes con ≥ 1 consulta digital/mes (horario o boleta) | ≥ 80 % |
+| "El DPA tarda semanas" | Tiempo medio aprobación oferta académica (North Star) | ≤ 4 días hábiles |
+
+---
+
 ## 5. Jobs-to-be-Done
 
 | JTBD ID | Cuando… | Quiero… | Para poder… |
@@ -377,6 +411,7 @@ La estrategia go-to-market parte del caso piloto validado hacia el sistema CEUB 
 - [x] TAM/SAM/SOM con fuentes (§3.1).
 - [x] ≥ 2 personas completas con criterio de adopción y willingness-to-pay (4 personas — §4.2).
 - [x] ≥ 2 segmentos detallados: Seg-1 (Docentes) y Seg-2 (Admin. Facultad + DPA).
+- [x] Voz del Cliente documentada (§4.3 — 8 entrevistas, citas, temas emergentes).
 - [x] ≥ 8 JTBD (8 JTBD — §5).
 - [x] Análisis competitivo con puntuación numérica y ≥ 5 alternativas (§6.1 — score 23/24).
 - [x] Positioning statement en 1 párrafo (§6.2).

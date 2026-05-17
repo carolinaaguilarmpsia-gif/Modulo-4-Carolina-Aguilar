@@ -4,6 +4,17 @@
 
 ---
 
+## Procedimiento de ejecución
+
+1. Confirmar resultado POC-01 (mecanismo: REST / readonly DB / CSV).
+2. Crear clase `*Adapter implements ILegacyAdapter` en `infrastructure/legacy-adapters/`.
+3. Job cron/Bull: sync diaria; `upsert` con `fuente_externa_id` + `sincronizado_at`.
+4. `healthCheck()` para monitoreo; 3 reintentos con backoff 1s, 2s, 4s.
+5. En lectura UI: servir BD local; si sync falló, banner + último `sincronizado_at`.
+6. Validar payload entrante con Zod antes de persistir.
+
+---
+
 ## Identidad
 
 ```yaml
@@ -138,3 +149,13 @@ export async function runNominaSync(
 | Timeout de conexión | Retry 3x con backoff; si falla → modo degradado | WARN → ERROR |
 | Credenciales incorrectas | No reintentar; alertar a Unidad de TI inmediatamente | CRITICAL |
 | Error de escritura en BD local | Rollback; marcar sync como fallida; alertar | ERROR |
+
+---
+
+## Checklist de salida
+
+- [ ] Solo lectura hacia legados (RES-03 / ADR-0002)
+- [ ] `sincronizado_at` en cada registro importado
+- [ ] UI muestra advertencia en modo degradado
+- [ ] Diagrama `docs/DIAGRAMS/seq_sync_legados.mmd` actualizado si cambia flujo
+- [ ] Sin credenciales en logs
