@@ -23,7 +23,7 @@
 
 ## 1. Resumen Ejecutivo ⚡🔧
 
-El SGAI es una plataforma web institucional que digitaliza y centraliza el ciclo académico-administrativo de una universidad pública boliviana con más de 1.500 docentes y 15+ facultades. El sistema resuelve el problema crítico de los procesos manuales y presenciales: ciclos de aprobación de oferta académica de 5–15 días, declaraciones juradas en papel sin trazabilidad, e información laboral inaccesible sin desplazamiento físico.
+El SGAI es una plataforma web institucional que digitaliza y centraliza el ciclo académico-administrativo de una universidad pública boliviana con más de 1.500 docentes y 15+ facultades. El sistema resuelve el problema crítico de los procesos manuales y presenciales: ciclos de aprobación de oferta académica de 8–15 días, declaraciones juradas en papel sin trazabilidad, e información laboral inaccesible sin desplazamiento físico.
 
 El sistema implementa cuatro dominios funcionales principales: (1) Gestión de Declaraciones Juradas con flujo de aprobación multinivel (Docente → Facultad → DPA), (2) Gestión de Oferta Académica entre facultades y el Departamento de Planificación Académica, (3) Información Laboral y Financiera con acceso self-service (horarios, carga horaria, boletas de pago), y (4) Administración del sistema (usuarios, materias, roles y permisos).
 

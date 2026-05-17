@@ -25,21 +25,21 @@
 
 ## 1. Resumen Ejecutivo
 
-**Problema:** Más de 1.500 docentes distribuidos en 15+ facultades de una universidad pública boliviana gestionan hoy su ciclo académico-administrativo íntegramente en papel y presencialmente. Los trámites de oferta académica demoran entre 5 y 15 días hábiles; las declaraciones juradas carecen de trazabilidad digital; y la información laboral (horarios, boletas de pago) solo es accesible mediante visitas físicas a la administración. El costo operativo estimado de esta ineficiencia supera las 800 horas-persona anuales solo en el DPA.
+**Problema:** Más de 1.500 docentes distribuidos en 15+ facultades de una universidad pública boliviana gestionan hoy su ciclo académico-administrativo íntegramente en papel y presencialmente. Los trámites de oferta académica demoran entre 8 y 15 días hábiles; las declaraciones juradas carecen de trazabilidad digital; y la información laboral (horarios, boletas de pago) solo es accesible mediante visitas físicas a la administración. El costo operativo estimado de esta ineficiencia supera las 800 horas-persona anuales solo en el DPA.
 
 **Propuesta:** El SGAI es una plataforma web institucional que centraliza, digitaliza y automatiza el ciclo completo de gestión académico-administrativa docente: declaraciones juradas con flujo multinivel de aprobación, trámite de oferta académica entre facultades y DPA, consulta self-service de horarios y boletas de pago, y administración de perfiles y roles. Se integra con los sistemas de nómina y el sistema de información institucional existentes sin modificarlos.
 
 **Valor esperado:**
-- Reducción del ciclo de aprobación de oferta académica de 5–15 días a ≤ 2 días hábiles.
+- Reducción del ciclo de aprobación de oferta académica de 8–15 días a ≤ 4 días hábiles.
 - 100 % de docentes activos con acceso self-service a información laboral sin trámite presencial.
-- Ahorro operativo estimado de USD 62.000 en 3 años (VAN: +USD 12.400 al 10 %).
+- Ahorro operativo estimado de USD 10.000 en 1 año
 
 **Métricas clave de éxito:**
-- **North Star (KPI-01):** Tiempo medio de aprobación de oferta académica ≤ 2 días hábiles — Q1 2027.
+- **North Star (KPI-01):** Tiempo medio de aprobación de oferta académica ≤ 4 días hábiles — Q1 2027.
 - **KPI-02:** Tasa de adopción digital de declaraciones juradas ≥ 90 % — Q1 2027.
 - **KPI-03:** Satisfacción docente ≥ 4/5 (escala 1–5) — Q2 2027.
 
-**Llamada a la acción:** Se requiere del sponsor la aprobación formal del presente BRD v2.0, la designación del equipo técnico, la apertura de acceso a APIs de nómina y sistema institucional, y la aprobación del presupuesto de desarrollo antes del **30 de junio de 2026**.
+**Llamada a la acción:** Se requiere del sponsor la aprobación formal del presente BRD v2.0, la designación del equipo técnico, la apertura de acceso a APIs de nómina y sistema institucional, y la aprobación del presupuesto de desarrollo antes del **30 de julio de 2026**.
 
 ---
 
@@ -62,17 +62,17 @@
 
 ### 3.1 Problema
 
-La institución opera con más de 1.500 docentes en 15+ facultades mediante flujos 100 % manuales y presenciales. El proceso de oferta académica —crítico para el inicio de cada semestre— exige que administradores de facultad compilen información en papel, la presenten físicamente al DPA, y aguarden revisión y devolución manual, con ciclos documentados de 5 a 15 días hábiles y tasas de observación (devolución por error) cercanas al 30 %. Las declaraciones juradas siguen el mismo patrón: entrega física, revisión sin trazabilidad y riesgo de edición post-aprobación sin registro. La información laboral y financiera (horarios, carga horaria, boletas de pago) solo es accesible mediante consultas directas a la administración, saturando los canales de atención.
+La institución opera con más de 1.500 docentes en 15+ facultades mediante flujos 100 % manuales y presenciales. El proceso de oferta académica —crítico para el inicio de cada semestre— exige que administradores de facultad compilen información en papel, la presenten físicamente al DPA, y aguarden revisión y devolución manual, con ciclos documentados de 8 a 15 días hábiles y tasas de observación (devolución por error) cercanas al 30 %. Las declaraciones juradas siguen el mismo patrón: entrega física, revisión sin trazabilidad y riesgo de edición post-aprobación sin registro. La información laboral y financiera (horarios, carga horaria, boletas de pago) solo es accesible mediante consultas directas a la administración, saturando los canales de atención.
 
 **Impacto cuantificado:**
-- Ciclo de aprobación: 5–15 días hábiles por trámite × 30+ trámites semestrales = hasta 450 días-hábiles de retraso acumulado por semestre.
+- Ciclo de aprobación: 8–15 días hábiles por trámite × 30+ trámites semestrales = hasta 450 días-hábiles de retraso acumulado por semestre.
 - Errores y re-trabajo: ~30 % de observaciones implican re-presentación física y ciclo adicional de 3–5 días.
 - Carga del DPA: estimado de 800+ horas-persona anuales en gestión manual de documentación.
 - Consecuencia de no actuar: deterioro de la planificación académica, incremento de errores, insatisfacción docente e incumplimiento de plazos normativos del CEUB.
 
 ### 3.2 Oportunidad
 
-- **Valor operativo:** Eliminar 5–13 días hábiles por trámite en 15 facultades × 2 semestres equivale a recuperar 800+ horas-persona anuales en DPA y administraciones.
+- **Valor operativo:** Eliminar 8–15 días hábiles por trámite en 15 facultades × 2 semestres equivale a recuperar 800+ horas-persona anuales en DPA y administraciones.
 - **Valor estratégico:** Posicionar a la universidad como institución digitalmente moderna, cumplir exigencias de transparencia y trazabilidad del marco CEUB y Ley 164.
 - **Ventana de oportunidad:** Proyecto *greenfield* sin deuda técnica heredada. El plazo de 6–12 meses permite tener el sistema operativo antes del ciclo académico 2027. Posibilidad de licenciar el sistema a otras universidades del CEUB como fuente adicional de valor institucional.
 
@@ -80,9 +80,9 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 | Aspecto | Detalle |
 |---------|---------|
-| Entrevistas realizadas | 8 entrevistas con docentes, 4 con administradores de facultad, 2 con técnicos DPA |
+| Entrevistas realizadas | 8 entrevistas con docentes, 4 con administradores de facultad, 1 con técnico DPA |
 | Hipótesis validada | "Los docentes prefieren gestión digital completa sobre proceso híbrido" — confirmada en 9/10 entrevistados |
-| Hipótesis en validación | "El DPA puede procesar trámites en ≤ 2 días si el sistema provee flujo digital" |
+| Hipótesis en validación | "El DPA puede procesar trámites en ≤ 4 días si el sistema provee flujo digital" |
 | Artefactos M2 (UI/UX) | Wireframes de flujo DJ, mockup panel docente, user journey oferta académica |
 | Próxima cadencia | Quincenal durante desarrollo (validación de prototipos con usuarios reales) |
 
@@ -139,7 +139,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 | **Para quién** | Docentes, administradores de facultad, técnicos DPA y administradores de una universidad pública boliviana con 1.500+ docentes y 15+ facultades |
 | **Que necesita** | Gestionar el ciclo académico-administrativo completo (declaraciones juradas, oferta académica, información laboral) de forma ágil, trazable y sin presencia física |
 | **Nuestra propuesta es** | Una plataforma web centralizada que digitaliza y automatiza los flujos de gestión académica y administrativa docente, integrada con los sistemas de nómina e información institucional existentes |
-| **Que le aporta** | 1. Eliminación de trámites presenciales y en papel; 2. Trazabilidad en tiempo real del estado de cada trámite; 3. Acceso self-service a información laboral y financiera; 4. Reducción del ciclo de aprobación de 5–15 días a ≤ 2 días; 5. Cumplimiento normativo embebido en reglas de negocio |
+| **Que le aporta** | 1. Eliminación de trámites presenciales y en papel; 2. Trazabilidad en tiempo real del estado de cada trámite; 3. Acceso self-service a información laboral y financiera; 4. Reducción del ciclo de aprobación de 8–15 días a ≤ 4 días; 5. Cumplimiento normativo embebido en reglas de negocio |
 | **A diferencia de** | Proceso actual: papel, correo electrónico, desplazamientos físicos y coordinación telefónica sin trazabilidad ni fuente única de verdad |
 | **Nuestro diferencial es** | Diseño específico para el contexto universitario boliviano (normativa CEUB, Ley 164), flujo de aprobación multinivel configurable, e integración nativa con sistemas legados sin modificarlos |
 
@@ -149,7 +149,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 | Competidor / alternativa | Tipo | Fortaleza percibida | Debilidad percibida |
 |--------------------------|------|---------------------|---------------------|
-| Proceso actual (papel + correo + presencia) | Do-nothing | Culturalmente aceptado; sin costo inmediato | Sin trazabilidad; 5–15 días de ciclo; propenso a pérdida de documentos |
+| Proceso actual (papel + correo + presencia) | Do-nothing | Culturalmente aceptado; sin costo inmediato | Sin trazabilidad; 8–15 días de ciclo; propenso a pérdida de documentos |
 | SIU-Guaraní (Argentina) | Directo | Maduro, probado en universidades latinoamericanas | No adaptado a normativa boliviana; costo de licencia y localización elevado |
 | Google Workspace (Forms + Drive + Sheets) | Indirecto | Bajo costo, familiar para usuarios | Sin flujo de aprobación formal; sin integración con nómina; sin reglas de negocio institucionales |
 | ERP universitario genérico (Ellucian, Banner) | Directo | Funcionalidad amplia, soporte empresarial | Costo prohibitivo para universidad pública; exceso de funcionalidad no requerida |
@@ -161,7 +161,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 | Bloque | Mínimo 3 elementos concretos |
 |--------|-------------------------------|
 | **1. Segmentos de clientes** | Docentes universitarios (1.500+) / Administradores de facultad (15+ unidades) / Técnicos y autoridades del DPA / Otras universidades del sistema CEUB (mercado potencial) |
-| **2. Propuesta de valor** | Digitalización completa del ciclo académico-administrativo docente / Trazabilidad y flujo de aprobación multinivel / Eliminación de trámites presenciales y reducción del ciclo a ≤ 2 días |
+| **2. Propuesta de valor** | Digitalización completa del ciclo académico-administrativo docente / Trazabilidad y flujo de aprobación multinivel / Eliminación de trámites presenciales y reducción del ciclo a ≤ 4 días |
 | **3. Canales** | Plataforma web responsive (cualquier navegador/dispositivo) / Notificaciones por correo electrónico institucional / Capacitaciones presenciales y tutoriales en línea |
 | **4. Relación con clientes** | Autogestión (self-service) vía portal web / Soporte técnico a través de la Unidad de TI / Acompañamiento durante onboarding con guías y videos |
 | **5. Fuentes de ingresos** | Presupuesto institucional universitario (modelo de costo compartido) / Posible licenciamiento a otras universidades CEUB / Ahorro operativo como retorno indirecto (800+ horas-persona/año) |
@@ -176,7 +176,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 | ID | KPI | North Star? | Línea base | Meta | Horizonte | Fuente del dato |
 |----|-----|-------------|------------|------|-----------|-----------------|
-| KPI-01 | Tiempo medio de aprobación de oferta académica (días hábiles) | **Sí** | 5–15 días hábiles | ≤ 2 días hábiles | Q1 2027 | Logs del sistema SGAI |
+| KPI-01 | Tiempo medio de aprobación de oferta académica (días hábiles) | **Sí** | 8–15 días hábiles | ≤ 4 días hábiles | Q1 2027 | Logs del sistema SGAI |
 | KPI-02 | Tasa de adopción digital de declaraciones juradas (% procesadas digitalmente) | No | 0 % (papel) | ≥ 90 % | Q1 2027 | Registros SGAI |
 | KPI-03 | Satisfacción del docente con el sistema (escala 1–5) | No | Por medir antes del lanzamiento | ≥ 4/5 | Q2 2027 | Encuesta semestral |
 | KPI-04 | % de docentes que consultan boletas/horarios sin trámite presencial | No | 0 % | 100 % | Q2 2027 | Logs de acceso SGAI |
@@ -188,7 +188,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 
 | ID | Objetivo | Métrica | Línea base | Meta | Horizonte |
 |----|----------|---------|------------|------|-----------|
-| BO-01 | Reducir el tiempo de aprobación del trámite de oferta académica mediante digitalización del flujo multinivel | Días hábiles promedio por trámite | 5–15 días | ≤ 2 días hábiles | Q1 2027 |
+| BO-01 | Reducir el tiempo de aprobación del trámite de oferta académica mediante digitalización del flujo multinivel | Días hábiles promedio por trámite | 8–15 días | ≤ 4 días hábiles | Q1 2027 |
 | BO-02 | Eliminar la presencialidad en la gestión de declaraciones juradas, migrar al 100 % al canal digital | % de DJ gestionadas digitalmente | 0 % | 100 % | Q1 2027 |
 | BO-03 | Garantizar acceso self-service a información laboral para el 100 % de los docentes activos | % de docentes con acceso sin trámite presencial | 0 % | 100 % | Q2 2027 |
 | BO-04 | Reducir la carga administrativa del DPA en la gestión de oferta académica en al menos 60 % | Horas-persona mensuales en revisión manual | ~67 h/mes (estimado) | ≤ 27 h/mes | Q2 2027 |
@@ -328,7 +328,7 @@ La institución opera con más de 1.500 docentes en 15+ facultades mediante fluj
 ## 17. Criterios de Éxito del Proyecto de Negocio
 
 - Cumplimiento de ≥ 80 % de los objetivos SMART definidos en la sección 9 al cierre del primer año de operación.
-- Tiempo de aprobación de oferta académica reducido a ≤ 2 días hábiles en el primer semestre de uso.
+- Tiempo de aprobación de oferta académica reducido a ≤ 4 días hábiles en el primer semestre de uso.
 - 100 % de declaraciones juradas gestionadas digitalmente al segundo semestre de operación.
 - Satisfacción del docente ≥ 4/5 en encuesta semestral post-lanzamiento.
 - Sistema operando sin incidentes críticos de seguridad durante los primeros 12 meses.
