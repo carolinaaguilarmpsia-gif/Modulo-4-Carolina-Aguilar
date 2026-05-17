@@ -1,0 +1,62 @@
+Sistema de Gestión Académica Integral (SGAI)
+
+Parte más difícil del sistema:  
+Flujo de Validación y Consolidación de la Oferta Académica.
+
+Por qué es difícil:
+
+Involucra múltiples actores (Facultad, DPA, Super Administrador).
+
+Depende de que materias y cargas horarias estén correctamente definidas.
+
+Un error en la aprobación o en los datos invalida la planificación del semestre, afectando contratación y calendario de clases.
+
+🎭 Escenario concreto
+Actor principal: Administrador de la Facultad
+
+Punto de partida: Inicio del ciclo de planificación académica.
+
+Pasos:
+
+El Administrador de Facultad consolida materias, horarios y docentes para la oferta del semestre.
+
+Envía el trámite formal de "Oferta Académica" al sistema.
+
+El Técnico DPA recibe notificación, revisa documentación y valida normativa.
+
+El Técnico DPA marca el trámite como "Aprobado" o "Observado".
+
+Resultado esperado: Oferta académica oficial publicada, disponible para docentes y alumnos (consultar horarios e inscribirse).
+
+📏 Reglas / Restricciones
+Ninguna materia puede ser ofertada sin carga horaria definida previamente por el Super Administrador.
+
+El Técnico DPA no puede aprobar un trámite si faltan documentos obligatorios.
+
+Un docente no puede ser asignado si su estado de nombramiento no está actualizado o es inválido.
+
+🧪 Caso de prueba concreto
+Datos de entrada:
+
+Facultad: Ingeniería
+
+Trámite ID: 550
+
+Materia: Cálculo I (Carga: 4 hrs)
+
+Docente: Juan Pérez (Estado: Activo)
+
+Documento adjunto: Planificacion_2026.pdf
+
+Datos de salida esperados:
+
+Estado del trámite: "En Revisión DPA"
+
+Notificación en dashboard del Técnico DPA
+
+Bloqueo de edición para la Facultad mientras dura la revisión
+
+✅ Criterio de éxito
+Trazabilidad total: Identificar en qué segundo y por qué motivo un trámite fue observado o aprobado.
+
+Integridad académica: No deben existir materias "huérfanas" (sin docente o sin horarios en el sistema final)

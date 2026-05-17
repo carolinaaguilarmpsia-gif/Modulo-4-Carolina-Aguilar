@@ -1,0 +1,81 @@
+Sistema de Gestión Académica Integral (SGAI)
+
+Descripción general:  
+Plataforma centralizada para la gestión de información académica y administrativa que articula las necesidades de docentes, facultades y el Departamento Académico (DPA). Permite administrar el ciclo de vida del docente (perfil, CV, pagos), gestionar la oferta académica y supervisar el cumplimiento normativo mediante declaraciones juradas, garantizando información validada y accesible para todos los actores institucionales.
+
+👤 Usuario principal #1: Docente
+Objetivo: Gestionar su perfil profesional, cumplir obligaciones administrativas y consultar información laboral/académica.
+
+Tareas clave:
+
+Crear y enviar declaraciones juradas.
+
+Consultar boletas de pago y calendario académico.
+
+Actualizar su Currículum Vitae.
+
+Visualizar horarios y horas de clase asignadas.
+
+👤 Usuario principal #2: Administrador de Facultad
+Objetivo: Coordinar planificación académica y validar situación administrativa de docentes.
+
+Tareas clave:
+
+Tramitar y enviar oferta académica de la facultad.
+
+Revisar y validar declaraciones juradas.
+
+Cargar y actualizar calendario académico.
+
+Gestionar estado de docentes (autoridad, investigador).
+
+👤 Usuario principal #3: Técnico DPA
+Objetivo: Supervisar y aprobar planificación académica institucional, generar reportes de control.
+
+Tareas clave:
+
+Revisar documentación técnica de trámites de oferta académica.
+
+Aprobar u observar trámites.
+
+Generar reportes consolidados de gestión académica.
+
+👤 Usuario principal #4: Administrador del Sistema
+Objetivo: Garantizar integridad del sistema, accesos y estructura base de carreras.
+
+Tareas clave:
+
+Crear cuentas de usuario.
+
+Configurar materias y cargas horarias por carrera.
+
+Gestionar roles y permisos.
+
+⚙️ Capacidades funcionales clave (6–10)
+Centralizar información académica y administrativa.
+
+Registrar y actualizar perfiles profesionales (CV).
+
+Gestionar flujo de declaraciones juradas (envío, revisión, estado).
+
+Visualizar cronogramas y calendarios académicos oficiales.
+
+Gestionar trámite de oferta académica entre facultades y DPA.
+
+Asignar y consultar carga horaria y horarios de clase.
+
+Administrar roles específicos (Autoridad, Investigador, Administrativo).
+
+Proveer acceso a información financiera (boletas de pago).
+
+📏 Reglas de negocio
+Solo docentes con vinculación activa pueden generar declaraciones juradas.
+
+Todo trámite de oferta académica debe ser revisado por la Facultad antes de pasar al DPA.
+
+El sistema debe impedir edición de declaraciones juradas aprobadas o en revisión, salvo devolución por observaciones.
+
+✅ Criterio de éxito (lenguaje de negocio)
+Reducción del tiempo de respuesta en aprobación de oferta académica.
+
+100% de docentes pueden consultar carga horaria y boletas de pago sin trámites presenciales ni correos externos.
