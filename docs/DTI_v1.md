@@ -301,7 +301,30 @@ sequenceDiagram
 
 ### 3.5 Contenedores Agénticos del Producto `[humano+máquina]`
 
-> **N/A — El SGAI v1.0 no expone agentes en runtime.** La IA participa exclusivamente en la cadena de construcción del software (AI-SDLC), no en el producto desplegado para los usuarios. Ver §0.1 (tabla de agentes de desarrollo) y §9.1 para la política de evaluación futura.
+> **N/A en runtime — El SGAI v1.0 no expone agentes en el producto desplegado.** La IA participa exclusivamente en la cadena de construcción (AI-SDLC). Ver §0.1, §3.5.1, §9.2 y §23.
+
+**Arquitectura agéntica de construcción (resumen):**
+
+| Capa | Artefacto | Función |
+|------|-----------|---------|
+| Contrato | `/AGENTS.md` | Reglas inviolables para agentes de código |
+| Skills | `docs/SKILLS/*.md` (8) | Procedimientos por bounded context / NFR |
+| Rules | `.cursor/rules/*.mdc` (4) | Enforcement en IDE (dominio, seguridad, Prisma, API) |
+| Trazabilidad | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` | Input → Prompt → Output |
+
+**Vistas arquitectónicas 4+1 (Kruchten):** `docs/DTI_AVANCE_VISTAS_4MAS1.md`.
+
+### 3.5.1 Elementos de Agentes — Prompts, Guardrails y Tools `[máquina]`
+
+| Elemento | Ubicación | Propósito |
+|----------|-----------|-----------|
+| Prompt-contracts UC | `PR-FSD-UC-001` … `010` en `PROMPT_MAPPINGS_v1.md` | Anatomía Role·Task·Context·Reasoning·Stop·Output por FSD-UC |
+| Guardrails dominio | `.cursor/rules/sgai-domain.mdc` | Enums, RB-01–07, terminología CEUB |
+| Guardrails seguridad | `.cursor/rules/security-ley164.mdc` | PII, JWT, bcrypt — alwaysApply |
+| Guardrails persistencia | `.cursor/rules/prisma-stack.mdc` | Prisma, transacciones RB-06 |
+| Guardrails API | `.cursor/rules/express-api-sgai.mdc` | Zod, controllers, HTTP |
+| Tools (skills) | `dj-validator`, `offer-auditor`, `boleta-privacy-guard`, `auth-rbac-guard`, etc. | Invocación obligatoria antes de implementar UC |
+| Evaluación | §23.1 | PII leakage, hallucination IDs, contradicción RB |
 
 ---
 
@@ -899,3 +922,4 @@ Cuando el SGAI incorpore agentes en runtime, se requerirá:
 |---------|-------|-------|--------|
 | v0.1 | 02/05/2026 | Carolina Aguilar | Borrador inicial — §0 y §1 completos; §2–§21 en borrador |
 | v1.0 | 10/05/2026 | Carolina Aguilar | DTI completo — todas las secciones del template v2 cubiertas; C4 niveles 1–3; §22 Auditoría IA; §23 Eval guardrails; 4 ADRs aceptadas |
+| v1.1 | 17/05/2026 | Carolina Aguilar | §3.5.1 prompts/guardrails/tools; anexo vistas 4+1 en `docs/DTI_AVANCE_VISTAS_4MAS1.md` |
