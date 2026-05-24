@@ -43,10 +43,10 @@ Este repositorio documenta el **programa de modernización incremental v1.0** de
 | MRD | Market Requirements Document | `docs/MRD.md` |
 | PRD | Product Requirements Document | `docs/PRD.md` |
 | FSD | Functional Specification Document | `docs/FSD.md` |
-| ADR-0001 | Decisión: Strangler Fig | `docs/adr/ADR-0001-migracion-incremental-strangler-fig.md` |
-| ADR-0002 | Decisión: REST + Eventos async | `docs/adr/ADR-0002-comunicacion-hibrida-rest-eventos-asincronos.md` |
-| C4 Nivel 1 | Diagrama de Contexto | `docs/c4/c4_context.mmd` |
-| C4 Nivel 2 | Diagrama de Contenedores | `docs/c4/c4_container.mmd` |
+| ADR-0001 | Decisión: Strangler Fig | `docs/adr/ADR-01-migracion-incremental-strangler-fig.md` |
+| ADR-0002 | Decisión: REST + Eventos async | `docs/adr/ADR-02-comunicacion-hibrida-rest-eventos-asincronos.md` |
+| C4 Nivel 1 | Diagrama de Contexto | `docs/diagrams/c4_context.mmd` |
+| C4 Nivel 2 | Diagrama de Contenedores | `docs/diagrams/c4_container.mmd` |
 | Prompt PRD | Prompt mejorado para generar el PRD | `prompts_mejorados/prd_mejorado.md` |
 | Prompt FSD | Prompt mejorado para generar el FSD | `prompts_mejorados/fsd_mejorado.md` |
 
