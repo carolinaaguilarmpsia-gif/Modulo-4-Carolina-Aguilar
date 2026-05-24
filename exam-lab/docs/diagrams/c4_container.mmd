@@ -1,0 +1,92 @@
+C4Container
+    title C4 Level 2 — Diagrama de Contenedores FTGO (Food To Go)
+
+    %% ── Actores externos ────────────────────────────────────────────
+    Person(consumer,   "Consumidor",    "Cliente final")
+    Person(restaurant, "Restaurante",   "Partner cocina")
+    Person(courier,    "Courier",       "Repartidor")
+    Person(backoffice, "Back Office",   "Soporte / Ops")
+
+    %% ── Sistemas externos ───────────────────────────────────────────
+    System_Ext(stripe,   "Stripe",      "Pagos PCI-DSS")
+    System_Ext(maps,     "Google Maps", "Rutas / ETA")
+    System_Ext(sendgrid, "SendGrid",    "Email transaccional")
+    System_Ext(twilio,   "Twilio",      "SMS / notificaciones")
+
+    %% ══════════════════════════════════════════════════════════════════
+    %% Boundary principal: FTGO Platform
+    %% ══════════════════════════════════════════════════════════════════
+    System_Boundary(ftgo, "FTGO Platform") {
+
+        %% ── Frontends ────────────────────────────────────────────────
+        Container(web_app,    "Web / Mobile App",   "React / React Native",  "UI para consumidor,\nrestaurante, courier\ny back office")
+
+        %% ── API Gateway (Strangler Fig router) ───────────────────────
+        Container(gateway,    "API Gateway",         "NGINX / AWS ALB",       "Enrutamiento Strangler Fig.\nCanary 5→40→100 % tráfico.\nTLS, rate limit, auth [ADR-0001]")
+
+        %% ── Microservicios ───────────────────────────────────────────
+        Container(order_svc,        "Order Service",        "Java / Spring Boot",   "Toma de pedidos [US-01].\nOrquesta checkout.\nPublica OrderCreated")
+        Container(restaurant_svc,   "Restaurant Service",   "Java / Spring Boot",   "Gestión de tickets [US-02].\nAdministración de menú.\nPublica OrderAccepted/Rejected")
+        Container(delivery_svc,     "Delivery Service",     "Java / Spring Boot",   "Asignación courier [US-03].\nTracking en tiempo real.\nPublica CourierAssigned")
+        Container(billing_svc,      "Billing Service",      "Java / Spring Boot",   "Cobro vía Stripe.\nWebhooks idempotentes.\nPublica PaymentCaptured")
+        Container(notification_svc, "Notification Service", "Node.js",              "Consume eventos de dominio.\nEnvía email (SendGrid)\ny SMS (Twilio)")
+
+        %% ── Monolito Legacy (Strangler Fig) ──────────────────────────
+        Container(monolith,   "Monolito Legacy",     "Java WAR / Tomcat",     "Capacidades no migradas.\nFuente de verdad transicional.\nRecibe tráfico residual [ADR-0001]")
+
+        %% ── Message Broker (Event Bus) ───────────────────────────────
+        Container(event_bus,  "Event Bus",            "RabbitMQ / SQS → Kafka v1.2", "Mensajería async entre servicios.\nEventos de dominio + DLQ.\nMigración a Kafka en v1.2 [ADR-0002]")
+
+        %% ── Bases de datos por servicio ──────────────────────────────
+        ContainerDb(db_order,    "Order DB",        "PostgreSQL",  "Pedidos, estados,\noutbox_events")
+        ContainerDb(db_rest,     "Restaurant DB",   "PostgreSQL",  "Tickets, menú,\noutbox_events")
+        ContainerDb(db_delivery, "Delivery DB",     "PostgreSQL",  "Asignaciones, tracking,\noutbox_events")
+        ContainerDb(db_billing,  "Billing DB",      "PostgreSQL",  "Transacciones, facturas,\noutbox_events")
+        ContainerDb(db_legacy,   "Legacy DB",       "MySQL",       "Datos compartidos\ndel monolito")
+    }
+
+    %% ══════════════════════════════════════════════════════════════════
+    %% RELACIONES
+    %% ══════════════════════════════════════════════════════════════════
+
+    %% ── Actores → Frontend ───────────────────────────────────────────
+    Rel(consumer,   web_app, "Accede a la plataforma",             "HTTPS")
+    Rel(restaurant, web_app, "Gestiona tickets y menú",            "HTTPS")
+    Rel(courier,    web_app, "Acepta asignaciones y navega",       "HTTPS")
+    Rel(backoffice, web_app, "Monitorea operaciones",              "HTTPS")
+
+    %% ── Frontend → Gateway ───────────────────────────────────────────
+    Rel(web_app, gateway, "Todas las llamadas API",                "HTTPS / REST + JSON")
+
+    %% ── Gateway → Microservicios (Strangler routing) ─────────────────
+    Rel(gateway, order_svc,      "POST /orders — canary routing",  "HTTPS / REST + JSON")
+    Rel(gateway, restaurant_svc, "GET/PATCH /tickets y /menu",     "HTTPS / REST + JSON")
+    Rel(gateway, delivery_svc,   "GET /deliveries y tracking",     "HTTPS / REST + JSON")
+    Rel(gateway, billing_svc,    "POST /payments — checkout",      "HTTPS / REST + JSON")
+    Rel(gateway, monolith,       "Tráfico residual no migrado",    "HTTPS / REST + JSON")
+
+    %% ── Microservicios → Bases de datos ──────────────────────────────
+    Rel(order_svc,      db_order,    "Lee y escribe pedidos + outbox",  "JDBC / SQL")
+    Rel(restaurant_svc, db_rest,     "Lee y escribe tickets + outbox",  "JDBC / SQL")
+    Rel(delivery_svc,   db_delivery, "Lee y escribe asignaciones",      "JDBC / SQL")
+    Rel(billing_svc,    db_billing,  "Lee y escribe transacciones",     "JDBC / SQL")
+    Rel(monolith,       db_legacy,   "Lee y escribe datos legacy",      "JDBC / SQL")
+
+    %% ── Microservicios → Event Bus (publicar eventos) ─────────────────
+    Rel(order_svc,      event_bus, "Publica OrderCreated",             "AMQP / Outbox pattern")
+    Rel(restaurant_svc, event_bus, "Publica OrderAccepted/Rejected",   "AMQP / Outbox pattern")
+    Rel(delivery_svc,   event_bus, "Publica CourierAssigned/Rejected", "AMQP / Outbox pattern")
+    Rel(billing_svc,    event_bus, "Publica PaymentCaptured",          "AMQP / Outbox pattern")
+
+    %% ── Event Bus → Microservicios (consumir eventos) ─────────────────
+    Rel(event_bus, notification_svc, "Entrega eventos de estado",      "AMQP / Subscribe")
+    Rel(event_bus, delivery_svc,     "Dispara asignación courier",     "AMQP / Subscribe")
+    Rel(event_bus, billing_svc,      "Inicia cobro post-aceptación",   "AMQP / Subscribe")
+
+    %% ── Microservicios → Sistemas Externos ───────────────────────────
+    Rel(billing_svc,      stripe,   "Autoriza y captura pago",         "HTTPS / REST — timeout 3s")
+    Rel(delivery_svc,     maps,     "Obtiene ruta y ETA",              "HTTPS / REST — timeout 3s")
+    Rel(notification_svc, sendgrid, "Envía email transaccional",       "HTTPS / REST — retry + DLQ")
+    Rel(notification_svc, twilio,   "Envía SMS de tracking",           "HTTPS / REST — retry + DLQ")
+
+    UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")

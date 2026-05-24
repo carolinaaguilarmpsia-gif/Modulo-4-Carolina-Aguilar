@@ -1,0 +1,31 @@
+C4Context
+    title C4 Level 1 — Diagrama de Contexto FTGO (Food To Go)
+
+    %% ── Personas / Actores ──────────────────────────────────────────
+    Person(consumer,      "Consumidor",        "Realiza pedidos, realiza pagos\ny hace tracking en tiempo real")
+    Person(restaurant,    "Restaurante",       "Gestiona tickets, acepta/rechaza\npedidos y administra menú")
+    Person(courier,       "Courier",           "Acepta asignaciones, navega\ny confirma entregas")
+    Person(backoffice,    "Empleado FTGO",     "Monitorea operaciones, resuelve\nincidentes y reasigna couriers")
+
+    %% ── Sistema Principal ────────────────────────────────────────────
+    System(ftgo,          "FTGO Platform",     "Plataforma de delivery: gestiona pedidos,\nentregas, pagos y notificaciones.\nMigración incremental Strangler Fig [ADR-0001]")
+
+    %% ── Sistemas Externos ────────────────────────────────────────────
+    System_Ext(stripe,    "Stripe",            "Procesamiento de pagos PCI-DSS.\nPAN/CVV nunca almacenados en FTGO")
+    System_Ext(maps,      "Google Maps",       "Geocoding, rutas y cálculo\nde ETA para couriers")
+    System_Ext(sendgrid,  "SendGrid",          "Envío de emails transaccionales:\nconfirmaciones, estados de pedido")
+    System_Ext(twilio,    "Twilio",            "Envío de SMS de tracking\ny notificaciones de estado")
+
+    %% ── Relaciones: Actores → FTGO ───────────────────────────────────
+    Rel(consumer,     ftgo,     "Crea pedidos, paga y hace tracking",     "HTTPS / REST")
+    Rel(restaurant,   ftgo,     "Gestiona tickets y actualiza menú",      "HTTPS / REST")
+    Rel(courier,      ftgo,     "Acepta asignaciones y confirma entregas","HTTPS / REST")
+    Rel(backoffice,   ftgo,     "Monitorea operaciones e interviene",      "HTTPS / REST")
+
+    %% ── Relaciones: FTGO → Sistemas Externos ─────────────────────────
+    Rel(ftgo, stripe,   "Autoriza y captura pagos",               "HTTPS / REST + Webhooks")
+    Rel(ftgo, maps,     "Obtiene rutas y ETA de entrega",          "HTTPS / REST")
+    Rel(ftgo, sendgrid, "Envía emails de estado de pedido",        "HTTPS / REST")
+    Rel(ftgo, twilio,   "Envía SMS de tracking al consumidor",     "HTTPS / REST")
+
+    UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
