@@ -1,0 +1,36 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc001_autenticacion — FSD-UC-001 Autenticación y Control de Acceso
+  actor Usuario
+  participant API as API SGAI
+  participant AUTH as Auth Service
+  participant LDAP as Directorio LDAP/AD
+  participant DB as PostgreSQL
+
+  Usuario->>API: POST /auth/login { email, password }
+  API->>AUTH: autenticar({ email, password })
+  AUTH->>DB: SELECT usuario WHERE email=:email
+  DB-->>AUTH: { id, email, intentos_fallidos, bloqueado_hasta, rol, facultad_id }
+  AUTH->>AUTH: Verificar si bloqueado_hasta > NOW()\n(RB-07: bloqueo 15 min tras 5 intentos)
+  alt Cuenta bloqueada
+    AUTH-->>API: AccountBlockedError
+    API-->>Usuario: 429 ACCOUNT_TEMPORARILY_BLOCKED\n{ desbloqueo_en: timestamp }
+  else Cuenta activa
+    AUTH->>LDAP: BIND con credenciales del usuario
+    alt LDAP disponible y credenciales válidas
+      LDAP-->>AUTH: BIND exitoso
+      AUTH->>DB: UPDATE usuario SET intentos_fallidos=0
+      AUTH->>AUTH: Generar JWT { userId, rol, facultadId, exp: +8h }
+      AUTH-->>API: { token, rol, nombre }
+      API-->>Usuario: 200 OK { access_token, rol, nombre }
+    else Credenciales inválidas
+      LDAP-->>AUTH: BIND fallido
+      AUTH->>DB: UPDATE usuario SET intentos_fallidos=intentos+1\n(si >= 5: SET bloqueado_hasta=NOW()+15min)
+      AUTH-->>API: InvalidCredentialsError
+      API-->>Usuario: 401 INVALID_CREDENTIALS
+    else LDAP no disponible
+      AUTH->>AUTH: Modo fallback: verificar password_hash local (bcrypt)
+      AUTH-->>API: LoginResult (local)
+      API-->>Usuario: 200 OK (con advertencia modo offline en header)
+    end
+  end

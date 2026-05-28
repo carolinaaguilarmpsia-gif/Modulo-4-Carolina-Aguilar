@@ -1,0 +1,286 @@
+---
+description: >
+  Convenciones de código TypeScript, Prisma ORM 5.x y PostgreSQL 15 para el SGAI.
+  Activar en schema Prisma, migraciones y adaptadores de persistencia (infrastructure/).
+  Enforcea arquitectura hexagonal, naming del FSD, transacciones atómicas RB-06,
+  queries performantes (NFR-001) y mapeo dominio ↔ BD sin filtrar Prisma al domain/.
+globs:
+  - "backend/prisma/**"
+  - "**/schema.prisma"
+  - "backend/infrastructure/persistence/**/*.ts"
+  - "backend/infrastructure/**/*.repository.ts"
+alwaysApply: false
+owner: Carolina Aguilar — G01
+status: stable
+fsd-version-min: v1.1
+---
+
+# prisma-stack — Convenciones de Código y Base de Datos
+
+## 1. Alcance y Arquitectura
+
+**Stack:** Prisma 5.x · PostgreSQL 15 · TypeScript 5.x strict.
+
+| Capa | Prisma permitido | Ubicación |
+|------|------------------|-----------|
+| `domain/` | ❌ NUNCA `@prisma/client` | Solo interfaces en `ports/out/` |
+| `api/` | ❌ NUNCA | Controllers → use cases |
+| `infrastructure/persistence/` | ✅ SÍ | Repositorios + `audit.logger.ts` |
+| `backend/prisma/` | ✅ SÍ | `schema.prisma`, `migrations/` |
+
+**Invariante (ADR-0001):** `domain/` no importa Prisma. Los tipos que salen de un repositorio hacia el dominio son entidades/DTOs del dominio, no `Prisma.*` ni modelos generados.
+
+---
+
+## 2. Estructura de Archivos
+
+```
+backend/
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
+└── infrastructure/
+    └── persistence/
+        ├── prisma.client.ts      # Singleton PrismaClient
+        ├── dj.repository.ts      # PrismaDJRepository
+        ├── oferta.repository.ts
+        ├── boleta.repository.ts
+        └── audit.logger.ts       # PrismaAuditLogger
+```
+
+**Naming de adaptadores:** `Prisma{NombreEntidad}Repository` implementa `I{NombreEntidad}Repository` del dominio (ver DTI §5.2).
+
+---
+
+## 3. Schema Prisma — Naming y Tipos
+
+### 3.1 Convención de nombres
+
+| Capa | Convención | Ejemplo |
+|------|------------|---------|
+| Modelo Prisma | PascalCase singular | `DeclaracionJurada` |
+| Tabla PostgreSQL | snake_case (FSD) | `@@map("declaracion_jurada")` |
+| Columna BD | snake_case | `@map("docente_id")` |
+| Campo TS (client) | camelCase | `docenteId` |
+| Enum Prisma | PascalCase | `EstadoDJ` |
+| Valores enum | SCREAMING_SNAKE (dominio) | `EN_REVISION_FACULTAD` |
+
+### 3.2 Plantilla de modelo (alineado a FSD §6)
+
+```prisma
+model DeclaracionJurada {
+  id               String   @id @default(uuid()) @db.Uuid
+  docenteId        String   @map("docente_id") @db.Uuid
+  periodoAcademico String   @map("periodo_academico") @db.VarChar(10) // "2026-I"
+  estado           EstadoDJ
+  camposFormulario Json     @map("campos_formulario")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  docente   Usuario       @relation(fields: [docenteId], references: [id])
+  historial HistorialDj[]
+
+  @@index([docenteId])
+  @@index([estado])
+  @@index([periodoAcademico])
+  @@map("declaracion_jurada")
+}
+
+enum EstadoDJ {
+  BORRADOR
+  EN_REVISION_FACULTAD
+  APROBADA
+  DEVUELTA
+  EN_REVISION_DPA
+  RECHAZADA
+}
+```
+
+### 3.3 Reglas de schema
+
+- **PK:** `id String @id @default(uuid()) @db.Uuid` en todas las entidades.
+- **FK:** nombre `{entidad}_id` en BD; relaciones explícitas con `onDelete` documentado (historial → `Restrict` o sin cascade destructivo).
+- **Historial (`HISTORIAL_DJ`, `HISTORIAL_OFERTA`):** solo INSERT; sin `update` ni `delete` en aplicación (auditoría inmutable, RB-06).
+- **PII/financiero:** `usuario.ci`, montos de `BoletaPago` — cifrado en app o pgcrypto; documentar en comentario del campo (ver `security-ley164.mdc`).
+- **Sincronización legados:** `fuenteExternaId` + `sincronizadoAt` en tablas cacheadas (`BoletaPago`, etc.).
+
+---
+
+## 4. Cliente Prisma — Singleton
+
+```typescript
+// infrastructure/persistence/prisma.client.ts
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+```
+
+- `DATABASE_URL` solo en `.env` (nunca en código).
+- En tests: mock del puerto del dominio o cliente de test con BD efímera; no compartir BD de desarrollo.
+
+---
+
+## 5. Repositorios — Patrón Obligatorio
+
+```typescript
+// infrastructure/persistence/dj.repository.ts
+import { prisma } from './prisma.client';
+import type { IDeclaracionJuradaRepository } from '../../domain/declaracion-jurada/ports/out';
+import type { DeclaracionJurada } from '../../domain/declaracion-jurada/entities';
+import { toDomainDJ, toPrismaEstado } from './mappers/dj.mapper';
+
+export class PrismaDJRepository implements IDeclaracionJuradaRepository {
+  async findById(id: string): Promise<DeclaracionJurada | null> {
+    const row = await prisma.declaracionJurada.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        docenteId: true,
+        periodoAcademico: true,
+        estado: true,
+        camposFormulario: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    return row ? toDomainDJ(row) : null;
+  }
+}
+```
+
+**MUST:**
+- Implementar el puerto `out/` del bounded context correspondiente.
+- Mapear `Prisma → dominio` en `infrastructure/persistence/mappers/` (un mapper por agregado).
+- Lanzar errores del dominio (`NotFoundError`, `DomainError`), no `Prisma.PrismaClientKnownRequestError` hacia `api/`.
+
+**NEVER:**
+- Devolver `Prisma.DeclaracionJuradaGetPayload<...>` desde un use case.
+- Lógica de máquina de estados dentro del repositorio (pertenece al dominio).
+
+---
+
+## 6. Queries — Rendimiento y Seguridad (NFR-001, RB-06)
+
+### 6.1 Select explícito
+
+```typescript
+// ✅ GOOD — select acotado
+await prisma.declaracionJurada.findMany({
+  where: { docenteId, estado: 'BORRADOR' },
+  select: { id: true, estado: true, periodoAcademico: true, updatedAt: true },
+  take: 20,
+  skip: page * 20,
+  orderBy: { updatedAt: 'desc' },
+});
+
+// ❌ BAD — trae JSON completo y relaciones implícitas
+await prisma.declaracionJurada.findMany({ where: { docenteId } });
+```
+
+### 6.2 Transacción atómica estado + historial (RB-06)
+
+```typescript
+await prisma.$transaction(async (tx) => {
+  await tx.declaracionJurada.update({
+    where: { id: djId },
+    data: { estado: nuevoEstado },
+  });
+  const historial = await tx.historialDj.create({
+    data: {
+      djId,
+      actorId,
+      estadoAnterior,
+      estadoNuevo: nuevoEstado,
+      observaciones,
+      timestamp: new Date(),
+    },
+    select: { id: true },
+  });
+  return historial;
+});
+```
+
+- Transiciones de DJ/Oferta: **siempre** `$transaction` (update + insert historial).
+- Concurrencia (NFR-008): si hay condiciones de carrera, valorar `update` con `where: { id, estado: estadoEsperado }` y manejar `P2025` como conflicto de dominio.
+
+### 6.3 Evitar N+1
+
+```typescript
+// ✅ include/select planificado en una query
+await prisma.ofertaAcademica.findUnique({
+  where: { id },
+  select: {
+    id: true,
+    estado: true,
+    asignaciones: {
+      select: { id: true, docenteId: true, materiaId: true, horario: true },
+    },
+  },
+});
+```
+
+### 6.4 Índices obligatorios (revisar en cada migración)
+
+Campos de filtro frecuente: `docente_id`, `facultad_id`, `estado`, `periodo_academico`, `email` (único en `usuario`).
+
+---
+
+## 7. Migraciones
+
+- Nombre: `YYYYMMDDHHMMSS_descripcion_snake` (ej. `20260510120000_add_declaracion_jurada`).
+- Una migración = un cambio lógico coherente (tabla + índices + FKs juntos).
+- **Nunca** editar migraciones ya aplicadas en staging/producción; crear nueva migración correctiva.
+- Tras cambiar `schema.prisma`: `npx prisma migrate dev` (local) / `migrate deploy` (CI/prod).
+- Commitear `schema.prisma` + carpeta `migrations/` juntos.
+
+---
+
+## 8. Errores Prisma → Dominio
+
+| Código Prisma | Mapeo en repositorio |
+|---------------|----------------------|
+| `P2025` (record not found) | `NotFoundError` |
+| `P2002` (unique violation) | `ValidationError` / `ConflictError` |
+| Otros | `DomainError` + log con `correlationId` (sin datos sensibles) |
+
+```typescript
+// ❌ NUNCA propagar a controllers
+throw error; // PrismaClientKnownRequestError crudo
+```
+
+---
+
+## 9. Checklist Rápido
+
+**MUST**
+- [ ] Prisma solo en `infrastructure/persistence/`
+- [ ] Repositorio implementa puerto `domain/.../ports/out/`
+- [ ] `select` explícito en lecturas de listados y detalle
+- [ ] `$transaction` en cambios de estado + historial
+- [ ] `@@map` / `@map` alineados al diccionario FSD §6
+- [ ] Índices en FKs y campos de búsqueda
+
+**NEVER**
+- [ ] `import { PrismaClient }` en `domain/` o `api/`
+- [ ] `findMany()` sin `where` en tablas grandes
+- [ ] UPDATE/DELETE en tablas de historial
+- [ ] Loggear `camposFormulario`, `ci`, montos de boleta
+- [ ] `any` en mappers; tipar payloads de `select`
+
+---
+
+## 10. Referencias
+
+- Entidades y atributos: `docs/FSD/FSD_v1.md` §6
+- Adaptadores: `DTI_v1.md` §5.2 · `docs/AGENTS/AGENTS.md` §2
+- Seguridad PII: `.cursor/rules/security-ley164.mdc`
+- Dominio y estados: `.cursor/rules/sgai-domain.mdc`
+- NFRs queries: `docs/SKILLS/nfr-compliance.md`

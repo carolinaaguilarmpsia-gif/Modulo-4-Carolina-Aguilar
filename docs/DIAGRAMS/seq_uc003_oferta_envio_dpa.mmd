@@ -1,0 +1,22 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc003_oferta_envio_dpa — FSD-UC-003 Envío Oferta Académica al DPA
+  actor AdminFac as Admin. Facultad
+  participant API as API SGAI
+  participant DOM as Oferta Domain Service
+  participant DB as PostgreSQL
+  participant QUEUE as Bull Queue
+
+  AdminFac->>API: PATCH /oferta-academica/:id/estado\n{ comando: "ENVIAR_DPA" }
+  API->>API: Verificar JWT (rol=ADMIN_FACULTAD, facultadId)
+  API->>DOM: transicionarOferta({ ofertaId, comando: ENVIAR_DPA, actorId, facultadId })
+  DOM->>DB: SELECT oferta WHERE id=ofertaId AND facultad_id=facultadId
+  DB-->>DOM: { estado: EN_ELABORACION, facultad_id }
+  DOM->>DB: SELECT COUNT asignaciones WHERE oferta_id=ofertaId AND docente_id IS NULL
+  DB-->>DOM: { sin_asignar: 0 }
+  Note over DOM: Validar: 0 materias sin docente (422 si > 0)
+  DOM->>DB: $transaction([\n  UPDATE oferta SET estado=EN_REVISION_DPA,\n  INSERT historial_oferta\n])
+  DB-->>DOM: OK
+  DOM->>QUEUE: enqueue(NotificacionEmail { to: tecnicoDPA, tipo: "OFERTA_ENVIADA_DPA" })
+  DOM-->>API: { ofertaId, estadoNuevo: "EN_REVISION_DPA" }
+  API-->>AdminFac: 200 OK

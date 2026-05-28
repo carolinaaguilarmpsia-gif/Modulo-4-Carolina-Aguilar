@@ -1,0 +1,16 @@
+periodo,docente_id,haber_basico_enc,descuentos_enc,neto_enc
+2026-I,doc-001,enc_h1,enc_d1,enc_n1
+2026-I,doc-002,enc_h2,enc_d2,enc_n2
+2026-I,doc-003,enc_h3,enc_d3,enc_n3
+2026-I,doc-004,enc_h4,enc_d4,enc_n4
+2026-I,doc-005,enc_h5,enc_d5,enc_n5
+2026-I,doc-006,enc_h6,enc_d6,enc_n6
+2026-I,doc-007,enc_h7,enc_d7,enc_n7
+2026-I,doc-008,enc_h8,enc_d8,enc_n8
+2026-I,doc-009,enc_h9,enc_d9,enc_n9
+2026-I,doc-010,enc_h10,enc_d10,enc_n10
+2026-I,doc-011,enc_h11,enc_d11,enc_n11
+2026-I,doc-012,enc_h12,enc_d12,enc_n12
+2026-I,doc-013,enc_h13,enc_d13,enc_n13
+2026-I,doc-014,enc_h14,enc_d14,enc_n14
+2026-I,doc-015,enc_h15,enc_d15,enc_n15

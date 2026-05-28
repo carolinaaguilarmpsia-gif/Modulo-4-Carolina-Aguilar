@@ -1,0 +1,39 @@
+%%{init: {"theme": "default"}}%%
+C4Container
+  title c4_cont_sgai — Diagrama de Contenedores SGAI (C4 Nivel 2)
+
+  Person(docente, "Docente", "Gestiona DJ, horarios, boletas")
+  Person(adminFac, "Admin. Facultad", "Coordina oferta académica")
+  Person(tecDPA, "Técnico DPA", "Aprueba trámites institucionales")
+  Person(adminSys, "Administrador Sistema", "Gestiona usuarios y permisos")
+
+  System_Boundary(sgai, "SGAI — Sistema de Gestión Académica Integral") {
+    Container(spa, "SPA React", "React 18 + Vite + TypeScript", "Interfaz web para todos los usuarios.\nServida como build estático por Nginx.")
+    Container(api, "API REST", "Node.js 20 + Express + TypeScript", "Expone los casos de uso del dominio.\nAutenticación JWT. Arquitectura hexagonal.")
+    Container(worker, "Worker de Notificaciones", "Node.js + Bull", "Procesa la cola de notificaciones SMTP\nen background. Redis como broker.")
+    Container(scheduler, "Scheduler de Sincronización", "Node.js + node-cron", "Cron job diario que ejecuta los\nadaptadores de sistemas legados.")
+    ContainerDb(db, "Base de Datos", "PostgreSQL 15", "Datos transaccionales del SGAI.\nDJ, ofertas, usuarios, boletas cacheadas.")
+    ContainerDb(cache, "Cola de Tareas", "Redis 7", "Broker para Bull Queue\n(notificaciones y alertas).")
+  }
+
+  System_Ext(nomina, "Sistema de Nómina", "Fuente de boletas de pago (solo lectura)")
+  System_Ext(sii, "Sistema Institucional", "Fuente de materias y asignaciones (solo lectura)")
+  System_Ext(smtp, "SMTP Institucional", "Envío de correos de notificación")
+  System_Ext(ldap, "Directorio LDAP/AD", "Autenticación de usuarios")
+
+  Rel(docente, spa, "Usa", "HTTPS / Navegador")
+  Rel(adminFac, spa, "Usa", "HTTPS / Navegador")
+  Rel(tecDPA, spa, "Usa", "HTTPS / Navegador")
+  Rel(adminSys, spa, "Usa", "HTTPS / Navegador")
+
+  Rel(spa, api, "Llama", "HTTPS / REST JSON")
+  Rel(api, db, "Lee/Escribe", "Prisma ORM / TCP")
+  Rel(api, cache, "Encola notificaciones", "Redis protocol")
+  Rel(api, ldap, "Valida credenciales", "LDAP / LDAPS")
+  Rel(worker, cache, "Consume cola", "Redis protocol")
+  Rel(worker, smtp, "Envía correos", "SMTP / SMTPS")
+  Rel(scheduler, nomina, "Lee boletas (batch)", "REST / BD solo lectura")
+  Rel(scheduler, sii, "Lee materias (batch)", "REST / BD solo lectura")
+  Rel(scheduler, db, "Persiste datos sincronizados", "Prisma ORM / TCP")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

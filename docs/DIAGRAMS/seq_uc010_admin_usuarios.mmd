@@ -1,0 +1,19 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc010_admin_usuarios — FSD-UC-010 Admin Usuarios y Materias
+  actor AdminSistema as Admin. Sistema
+  participant API as API SGAI
+  participant DOM as Administracion Service
+  participant SMTP as Cola Notificaciones
+  participant DB as PostgreSQL
+
+  AdminSistema->>API: POST /admin/usuarios { nombre, email, rol, facultadId }
+  API->>API: Verificar rol ADMIN_SISTEMA
+  API->>DOM: crearUsuario(datos)
+  DOM->>DOM: Validar Zod + email único
+  DOM->>DOM: bcrypt hash password temporal
+  DOM->>DB: INSERT usuario + auditoria
+  DB-->>DOM: userId
+  DOM->>SMTP: Encolar email bienvenida
+  DOM-->>API: { userId, email }
+  API-->>AdminSistema: 201 Created

@@ -1,0 +1,137 @@
+%%{init: {"theme": "default"}}%%
+erDiagram
+  title er_sgai_core — Modelo de Datos Principal del SGAI
+
+  USUARIO {
+    uuid id PK
+    string nombre
+    string apellido
+    string email
+    string password_hash
+    enum rol
+    uuid facultad_id FK
+    boolean vinculacion_activa
+    int intentos_fallidos
+    datetime bloqueado_hasta
+    datetime created_at
+    datetime updated_at
+  }
+
+  FACULTAD {
+    uuid id PK
+    string nombre
+    string codigo
+    datetime created_at
+  }
+
+  CARRERA {
+    uuid id PK
+    string nombre
+    string codigo
+    uuid facultad_id FK
+  }
+
+  MATERIA {
+    uuid id PK
+    string nombre
+    string codigo
+    uuid carrera_id FK
+    int carga_horaria_teoria
+    int carga_horaria_practica
+    datetime sincronizado_at
+  }
+
+  DECLARACION_JURADA {
+    uuid id PK
+    uuid docente_id FK
+    string tipo
+    string periodo_academico
+    enum estado
+    json campos_formulario
+    string archivo_adjunto_url
+    datetime created_at
+    datetime updated_at
+  }
+
+  HISTORIAL_DJ {
+    uuid id PK
+    uuid dj_id FK
+    uuid actor_id FK
+    enum estado_anterior
+    enum estado_nuevo
+    text observaciones
+    datetime timestamp
+  }
+
+  OFERTA_ACADEMICA {
+    uuid id PK
+    uuid facultad_id FK
+    string periodo_academico
+    enum estado
+    datetime created_at
+    datetime updated_at
+  }
+
+  ASIGNACION_DOCENTE {
+    uuid id PK
+    uuid oferta_id FK
+    uuid docente_id FK
+    uuid materia_id FK
+    string horario
+    string aula
+    int carga_horaria_semanal
+  }
+
+  HISTORIAL_OFERTA {
+    uuid id PK
+    uuid oferta_id FK
+    uuid actor_id FK
+    enum estado_anterior
+    enum estado_nuevo
+    text observaciones
+    datetime timestamp
+  }
+
+  BOLETA_PAGO {
+    uuid id PK
+    uuid docente_id FK
+    string periodo
+    decimal haber_basico
+    decimal descuentos
+    decimal neto
+    string fuente_externa_id
+    datetime sincronizado_at
+  }
+
+  PERFIL_DOCENTE {
+    uuid id PK
+    uuid docente_id FK
+    json formacion_academica
+    json publicaciones
+    json experiencia_docente
+    datetime updated_at
+  }
+
+  CALENDARIO_ACADEMICO {
+    uuid id PK
+    uuid facultad_id FK
+    string periodo
+    json eventos
+    datetime updated_at
+  }
+
+  USUARIO ||--o{ DECLARACION_JURADA : "crea"
+  USUARIO ||--o{ HISTORIAL_DJ : "genera"
+  USUARIO ||--o{ HISTORIAL_OFERTA : "genera"
+  USUARIO ||--o| PERFIL_DOCENTE : "tiene"
+  USUARIO ||--o{ BOLETA_PAGO : "recibe"
+  FACULTAD ||--o{ USUARIO : "agrupa"
+  FACULTAD ||--o{ OFERTA_ACADEMICA : "tiene"
+  FACULTAD ||--o{ CARRERA : "tiene"
+  FACULTAD ||--o{ CALENDARIO_ACADEMICO : "publica"
+  CARRERA ||--o{ MATERIA : "incluye"
+  OFERTA_ACADEMICA ||--o{ ASIGNACION_DOCENTE : "contiene"
+  OFERTA_ACADEMICA ||--o{ HISTORIAL_OFERTA : "tiene"
+  ASIGNACION_DOCENTE }o--|| USUARIO : "asigna docente"
+  ASIGNACION_DOCENTE }o--|| MATERIA : "de materia"
+  DECLARACION_JURADA ||--o{ HISTORIAL_DJ : "tiene"

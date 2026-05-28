@@ -1,0 +1,28 @@
+%%{init: {"theme": "default"}}%%
+C4Context
+  title c4_ctx_sgai — Diagrama de Contexto SGAI (C4 Nivel 1)
+  %% Leyenda: Actores humanos → SGAI → Sistemas externos (solo lectura / SMTP / LDAP)
+
+  Person(docente, "Docente", "1.500+ usuarios — DJ, horarios, boletas")
+  Person(adminFac, "Administrador de Facultad", "Oferta académica y revisión DJ")
+  Person(tecDPA, "Técnico DPA", "Aprobación institucional y reportes")
+  Person(adminSys, "Administrador del Sistema", "Usuarios, materias, permisos")
+
+  System(sgai, "SGAI", "Plataforma web de gestión académica integral\nCEUB · Ley N° 164")
+
+  System_Ext(nomina, "Sistema de Nómina", "Boletas de pago (solo lectura)")
+  System_Ext(sii, "Sistema Institucional", "Materias, horarios, asignaciones (solo lectura)")
+  System_Ext(ldap, "Directorio LDAP/AD", "Autenticación institucional")
+  System_Ext(smtp, "SMTP Institucional", "Notificaciones por correo")
+
+  Rel(docente, sgai, "Gestiona trámites y consulta información", "HTTPS")
+  Rel(adminFac, sgai, "Coordina oferta y revisa DJ", "HTTPS")
+  Rel(tecDPA, sgai, "Aprueba trámites y genera reportes", "HTTPS")
+  Rel(adminSys, sgai, "Administra usuarios y catálogos", "HTTPS")
+
+  Rel(sgai, nomina, "Sincroniza boletas", "Adaptador solo lectura / batch")
+  Rel(sgai, sii, "Sincroniza oferta y horarios", "Adaptador solo lectura / batch")
+  Rel(sgai, ldap, "Valida credenciales", "LDAP/LDAPS")
+  Rel(sgai, smtp, "Envía notificaciones", "SMTP/SMTPS")
+
+  UpdateLayoutConfig($c4ShapeInRow="2", $c4BoundaryInRow="1")

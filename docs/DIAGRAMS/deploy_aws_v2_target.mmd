@@ -1,0 +1,19 @@
+%%{init: {"theme": "default"}}%%
+flowchart TB
+  subgraph legend["Leyenda — Despliegue objetivo AWS v2.0 (ADR-0005)"]
+    L1[Piloto v1.0: on-prem ADR-0004]
+    L2[Objetivo v2.0: región sa-east-1]
+  end
+
+  Users[Usuarios CEUB] --> CF[CloudFront + S3 SPA]
+  CF --> ALB[Application Load Balancer]
+  ALB --> ECS_API[ECS Fargate sgai-api]
+  ALB --> ECS_W[ECS Fargate sgai-worker]
+  ECS_API --> RDS[(RDS PostgreSQL 15)]
+  ECS_API --> EC[ElastiCache Redis]
+  ECS_W --> SQS[Amazon SQS]
+  ECS_API --> EVB[EventBridge]
+  EVB --> SQS
+  ECS_W --> SMTP_EXT[SMTP vía VPN]
+  ECS_API --> LDAP_EXT[LDAP vía VPN]
+  RDS --> KMS[AWS KMS]

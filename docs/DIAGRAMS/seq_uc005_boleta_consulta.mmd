@@ -1,0 +1,22 @@
+%%{init: {"theme": "default"}}%%
+sequenceDiagram
+  title seq_uc005_boleta_consulta — FSD-UC-005 Consulta de Boleta de Pago
+  actor Docente
+  participant API as API SGAI
+  participant DOM as Boleta Domain Service
+  participant DB as PostgreSQL
+
+  Docente->>API: GET /boletas-pago?periodo=2026-I
+  API->>API: Verificar JWT (rol=DOCENTE, userId=docenteId)
+  Note over API: docente_id se extrae SOLO del JWT — RB-04
+  API->>DOM: consultarBoletas({ docenteId: jwt.userId, periodo: "2026-I" })
+  DOM->>DB: SELECT * FROM boleta_pago\nWHERE docente_id=:docenteId AND periodo=:periodo
+  DB-->>DOM: [{ id, periodo, haber_basico, descuentos, neto, sincronizado_at }]
+  DOM->>DOM: Verificar sincronizado_at\n(advertir si > 24h)
+  DOM-->>API: BoletaResult { boletas, advertencia? }
+  API-->>Docente: 200 OK { boletas, ultima_sincronizacion }
+
+  Note over Docente,DB: Si otro rol intenta acceder vía URL directa:
+  Docente->>API: GET /boletas-pago?docenteId=OTRO_UUID
+  API->>API: jwt.userId !== params.docenteId → ForbiddenError
+  API-->>Docente: 403 UNAUTHORIZED_DATA_ACCESS

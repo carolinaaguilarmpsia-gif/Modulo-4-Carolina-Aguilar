@@ -1,0 +1,567 @@
+---
+description: >
+  Reglas de seguridad, privacidad y cifrado para el SGAI bajo Ley N° 164 de Bolivia.
+  Activar en cualquier archivo TypeScript de backend (infrastructure/, api/, domain/).
+  Enforcea: campos PII nunca en logs, acceso exclusivo a datos personales, cifrado
+  en reposo y tránsito, manejo seguro de JWT y bcrypt, headers HTTP de seguridad,
+  y auditoría de acceso a datos sensibles. Todas las reglas son NO negociables.
+globs:
+  - "backend/**/*.ts"
+  - "infrastructure/**/*.ts"
+  - "api/**/*.ts"
+  - "domain/**/*.ts"
+alwaysApply: true
+owner: Carolina Aguilar — G01
+status: stable
+fsd-version-min: v1.1
+---
+
+# security-ley164 — Privacidad y Seguridad Ley N° 164 Bolivia
+
+## 1. Contexto Legal y Normativo
+
+El SGAI opera bajo la **Ley N° 164 de Telecomunicaciones y Tecnologías de Información y Comunicación del Estado Plurinacional de Bolivia**, que establece:
+- Obligación de proteger datos personales de los ciudadanos.
+- Requisito de soberanía de datos (datos almacenados en servidores locales).
+- Responsabilidad del operador del sistema ante brechas de seguridad.
+- Derecho al olvido y acceso de los titulares a sus propios datos.
+
+El sistema gestiona datos personales de **1.500+ docentes universitarios**, incluyendo información laboral (carga horaria, vinculación contractual) y financiera (boletas de pago con haber básico, descuentos y neto). Una brecha de seguridad tiene consecuencias legales institucionales directas.
+
+---
+
+## 2. Campos PII — Datos Personales Protegidos (DPP)
+
+Los siguientes campos son **Datos Personales Protegidos** bajo la Ley 164. Aplican las restricciones absolutas del §3.
+
+```typescript
+// LISTA DEFINITIVA — actualizar solo con revisión del Arquitecto
+const PII_FIELDS = [
+  // Identificación personal
+  'password',
+  'password_hash',
+  'ci',                 // Cédula de Identidad boliviana
+  'fecha_nacimiento',
+
+  // Datos financieros (boletas de pago)
+  'haber_basico',
+  'descuentos',
+  'neto',
+
+  // Contacto personal
+  'telefono',
+  'direccion',
+  'telefono_personal',
+
+  // Credenciales de acceso
+  'ldap_bind_password',
+  'jwt_secret',
+  'smtp_pass',
+] as const;
+
+type PiiField = typeof PII_FIELDS[number];
+```
+
+---
+
+## 3. MUST / MUST NOT — Restricciones Absolutas (Ley 164)
+
+### 3.1 Logs — Lo que NUNCA puede aparecer
+
+```typescript
+// ❌ PROHIBIDO — viola Ley 164 — bloquea el release en CI
+logger.info('Login attempt', { password: req.body.password });
+logger.info('Boleta', { haber_basico: 5000, descuentos: 800, neto: 4200 });
+logger.error('Error', { ci: usuario.ci, password_hash: usuario.password_hash });
+
+// ✅ CORRECTO — solo metadatos no sensibles
+logger.info('Login attempt', {
+  correlationId: req.correlationId,
+  email: req.body.email,   // email OK — no es PII financiero
+  ip: req.ip,
+  timestamp: new Date().toISOString(),
+});
+logger.info('Boleta accessed', {
+  correlationId: req.correlationId,
+  accessorId: req.user.userId,
+  resourceType: 'BOLETA_PAGO',
+  resourceId: boleta.id,    // solo el ID, nunca los montos
+  periodo: boleta.periodo,  // período OK — no es dato financiero
+});
+```
+
+### 3.2 URLs — Datos sensibles NUNCA en query params
+
+```typescript
+// ❌ PROHIBIDO — aparece en logs de Nginx y en historial del navegador
+GET /boletas?ci=12345678&haber_basico=5000
+
+// ✅ CORRECTO — datos del body o del JWT
+GET /boletas-pago?periodo=2026-I   // período en query param es aceptable
+// La identificación del docente viene del JWT, no de la URL
+```
+
+### 3.3 Respuestas HTTP — No exponer internos en producción
+
+```typescript
+// ❌ PROHIBIDO en producción
+res.status(500).json({
+  error: err.message,    // puede contener SQL, rutas de archivos, stack traces
+  stack: err.stack,      // revela arquitectura del sistema
+  query: err.query,      // revela queries SQL
+});
+
+// ✅ CORRECTO
+res.status(500).json({
+  error: 'INTERNAL_ERROR',
+  correlationId: req.correlationId,  // permite rastrear en logs internos
+  // NADA MÁS — el detalle técnico va solo al log interno
+});
+```
+
+---
+
+## 4. Validación de Acceso a Datos Personales (RB-04)
+
+**MUST** incluir esta verificación en TODO endpoint que retorne datos de un docente específico.
+
+```typescript
+// helpers/assertOwnData.ts
+function assertOwnData(
+  req: AuthenticatedRequest,
+  targetDocenteId: string,
+  correlationId: string
+): void {
+  if (req.user.rol === Rol.DOCENTE && req.user.userId !== targetDocenteId) {
+    // Log de auditoría del intento de acceso no autorizado
+    logger.warn('Unauthorized data access attempt', {
+      correlationId,
+      accessorId: req.user.userId,
+      accessorRol: req.user.rol,
+      targetResourceId: targetDocenteId,
+      resourceType: 'DOCENTE_DATA',
+      timestamp: new Date().toISOString(),
+    });
+    throw new ForbiddenError('UNAUTHORIZED_DATA_ACCESS'); // HTTP 403 — RB-04 / Ley 164
+  }
+}
+
+// Uso obligatorio en controladores de datos personales:
+app.get('/boletas-pago', authenticate, (req, res) => {
+  const docenteId = req.user.userId; // SIEMPRE del JWT — NUNCA de req.params
+  assertOwnData(req, docenteId, req.correlationId); // PRIMERA línea antes de cualquier lógica
+  // ...
+});
+```
+
+---
+
+## 5. Autenticación Segura — JWT y bcrypt
+
+### 5.1 JWT — Configuración Obligatoria
+
+```typescript
+// infrastructure/auth/jwt.service.ts
+const JWT_CONFIG = {
+  algorithm: 'HS256' as const,  // Adecuado para monolito on-premise
+  expiresIn: '8h',              // NFR-006: máximo 8 horas — PRD-US-018
+  issuer: 'sgai-universidad',   // Identificador del emisor
+} as const;
+
+// Payload del JWT — campos permitidos (NUNCA incluir PII)
+interface JwtPayload {
+  userId: string;      // UUID del usuario
+  email: string;       // email institucional (no es PII financiero)
+  rol: Rol;            // enum de roles
+  facultadId: string;  // UUID de la facultad
+  iat: number;         // issued at (automático)
+  exp: number;         // expiration (automático)
+  // ❌ NUNCA incluir: password, ci, haber_basico, telefono
+}
+
+// Almacenamiento del JWT en el cliente
+// ✅ Memoria del frontend (variable React state)
+// ✅ httpOnly cookie con Secure + SameSite=Strict
+// ❌ localStorage — vulnerable a XSS
+// ❌ sessionStorage — no persiste entre pestañas, pero igual vulnerable a XSS
+```
+
+### 5.2 bcrypt — Hashing de Contraseñas
+
+```typescript
+// infrastructure/auth/password.service.ts
+const BCRYPT_COST_FACTOR = 12; // Mínimo 12 — NUNCA bajar este valor
+
+async function hashPassword(plaintext: string): Promise<string> {
+  // ✅ Nunca loggear el plaintext ni el hash
+  return bcrypt.hash(plaintext, BCRYPT_COST_FACTOR);
+}
+
+async function verifyPassword(plaintext: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(plaintext, hash);
+  // ✅ bcrypt.compare es timing-safe — previene timing attacks
+}
+
+// ❌ NUNCA usar:
+// MD5, SHA1, SHA256 sin salt — inseguros
+// SHA256 con salt fijo — vulnerable a rainbow tables
+// Costo factor < 12 — demasiado rápido para ataques de fuerza bruta
+```
+
+### 5.3 Bloqueo de Cuenta — RB-07
+
+```typescript
+// MUST implementar en el servicio de autenticación
+const MAX_FAILED_ATTEMPTS = 5;
+const BLOCK_DURATION_MINUTES = 15;
+
+async function verificarBloqueoCuenta(usuario: Usuario): Promise<void> {
+  if (usuario.bloqueado_hasta && usuario.bloqueado_hasta > new Date()) {
+    const tiempoRestante = Math.ceil(
+      (usuario.bloqueado_hasta.getTime() - Date.now()) / 60000
+    );
+    throw new UnauthorizedError('ACCOUNT_TEMPORARILY_BLOCKED');
+    // La respuesta HTTP debe incluir: desbloqueo_en: usuario.bloqueado_hasta.toISOString()
+  }
+}
+
+async function registrarIntentoFallido(usuarioId: string): Promise<void> {
+  // Incrementar y verificar si debe bloquear — en la MISMA transacción
+  await prisma.$transaction(async (tx) => {
+    const usuario = await tx.usuario.update({
+      where: { id: usuarioId },
+      data: { intentos_fallidos: { increment: 1 } },
+      select: { intentos_fallidos: true },
+    });
+    if (usuario.intentos_fallidos >= MAX_FAILED_ATTEMPTS) {
+      await tx.usuario.update({
+        where: { id: usuarioId },
+        data: {
+          bloqueado_hasta: new Date(Date.now() + BLOCK_DURATION_MINUTES * 60 * 1000),
+        },
+      });
+    }
+  });
+}
+```
+
+---
+
+## 6. Cifrado — Datos en Reposo y en Tránsito
+
+### 6.1 En Reposo — Campos PII en PostgreSQL
+
+```typescript
+// Campos que DEBEN estar cifrados en la BD (AES-256):
+// - usuario.ci
+// - boleta_pago.haber_basico, boleta_pago.descuentos, boleta_pago.neto
+// - cualquier campo de contacto personal (telefono, direccion)
+
+// Implementación recomendada: pgcrypto (extensión PostgreSQL)
+// O: cifrado a nivel de aplicación antes del INSERT con crypto.createCipheriv
+
+// En el schema de Prisma, documentar con @map("campo_encrypted")
+// y añadir @db.Text para el campo cifrado base64
+
+// Verificación: NFR-004 — auditoria de configuración PostgreSQL
+// Responsable: Unidad de TI — antes del go-live v1.0
+```
+
+### 6.2 En Tránsito — TLS (Configuración Nginx)
+
+```nginx
+# nginx.conf — OBLIGATORIO en staging y producción
+server {
+  listen 443 ssl;
+
+  # TLS 1.2+ mínimo — NFR-005
+  ssl_protocols TLSv1.2 TLSv1.3;
+  ssl_ciphers ECDHE-RSA-AES256-GCM-SHA384:ECDHE-RSA-AES128-GCM-SHA256;
+  ssl_prefer_server_ciphers on;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 10m;
+
+  # Headers de seguridad — OBLIGATORIOS
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+  # Ocultar versión de Nginx
+  server_tokens off;
+}
+```
+
+---
+
+## 7. Gestión de Secretos
+
+```typescript
+// ✅ CORRECTO — siempre desde variables de entorno
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be at least 32 characters — check .env');
+}
+
+// ❌ ABSOLUTAMENTE PROHIBIDO — causa bloqueo automático del release en CI
+const JWT_SECRET = 'mi-secreto-hardcodeado';          // ❌
+const DB_PASSWORD = 'postgres123';                      // ❌
+const LDAP_BIND_PASS = 'ldap-password-en-codigo';      // ❌
+
+// Variables de entorno requeridas (verificar en startup):
+const REQUIRED_ENV_VARS = [
+  'DATABASE_URL',
+  'JWT_SECRET',         // mínimo 32 chars
+  'REDIS_URL',
+  'SMTP_HOST',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'LDAP_URL',
+  'LDAP_BASE_DN',
+] as const;
+
+function validateEnvOnStartup(): void {
+  const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+```
+
+**Política de rotación:**
+- `JWT_SECRET`: rotación **semestral** (cada 6 meses).
+- `SMTP_PASS`: rotación **anual** o ante sospecha de compromiso.
+- `DATABASE_URL` password: rotación **anual**.
+- `.env` nunca se commitea al repositorio. Está en `.gitignore` y en la documentación de la Unidad de TI.
+
+---
+
+## 8. Validación de Inputs — Siempre Antes del Dominio
+
+**MUST** validar con Zod (o class-validator) en la capa de API **antes** de pasar cualquier dato al dominio. El dominio asume que los datos que recibe ya están validados y sanitizados.
+
+```typescript
+// api/controllers/dj.controller.ts
+import { z } from 'zod';
+
+// Schema de validación — definir en la capa api/, NO en domain/
+const TransicionDJSchema = z.object({
+  comando: z.enum(['ENVIAR', 'APROBAR', 'DEVOLVER', 'ESCALAR_DPA', 'REENVIAR', 'RECHAZAR']),
+  observaciones: z.string().min(10).max(1000).optional(),
+  // NUNCA incluir actorId en el body — viene del JWT
+});
+
+// Middleware de validación
+function validateBody<T>(schema: z.ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(422).json({
+        error: 'VALIDATION_ERROR',
+        details: result.error.flatten(),
+        correlationId: req.correlationId,
+      });
+    }
+    req.validatedBody = result.data;
+    next();
+  };
+}
+
+// Uso:
+router.patch('/declaraciones-juradas/:id/estado',
+  authenticate,          // 1. Verificar JWT
+  validateBody(TransicionDJSchema),  // 2. Validar input
+  djController.transicionarEstado    // 3. Lógica de negocio
+);
+```
+
+---
+
+## 9. Auditoría de Acceso a Datos Sensibles
+
+**MUST** registrar en logs de auditoría toda consulta a datos personales o financieros.
+
+```typescript
+// infrastructure/audit/accessAudit.ts
+interface AccessAuditLog {
+  correlationId: string;
+  accessorId: string;      // userId del actor
+  accessorRol: Rol;
+  resourceType: 'BOLETA_PAGO' | 'DJ_CAMPOS' | 'PERFIL_DOCENTE' | 'USUARIO_DETAIL';
+  resourceId: string;      // ID del recurso (nunca los datos en sí)
+  action: 'READ' | 'WRITE' | 'DELETE';
+  timestamp: string;       // ISO 8601
+  // NUNCA incluir: valores de PII_FIELDS
+}
+
+function logSensitiveAccess(entry: AccessAuditLog): void {
+  logger.info('SENSITIVE_DATA_ACCESS', entry);
+  // Este log tiene retención de 1 año (nivel medium — DTI §22.2)
+}
+
+// Uso obligatorio en endpoints de datos sensibles:
+// - GET /boletas-pago → log BOLETA_PAGO READ
+// - GET /mi-perfil con datos completos → log PERFIL_DOCENTE READ
+// - POST/PATCH /admin/usuarios → log USUARIO_DETAIL WRITE
+```
+
+---
+
+## 10. Rate Limiting y Protección Anti-Fuerza Bruta
+
+```typescript
+// api/middleware/rateLimiting.middleware.ts
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting para endpoints de autenticación — OBLIGATORIO
+export const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutos
+  max: 20,                    // máximo 20 intentos por IP en 15 min
+  message: {
+    error: 'RATE_LIMIT_EXCEEDED',
+    message: 'Demasiados intentos de acceso. Intente nuevamente en 15 minutos.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => process.env.NODE_ENV === 'test', // skip en tests
+});
+
+// Rate limiting para generación de reportes (evitar DoS)
+export const reportRateLimit = rateLimit({
+  windowMs: 60 * 1000,   // 1 minuto
+  max: 5,                // máximo 5 reportes por minuto por usuario
+  keyGenerator: (req) => req.user?.userId ?? req.ip, // por usuario, no por IP
+});
+
+// Uso en router:
+router.post('/auth/login', authRateLimit, authController.login);
+router.post('/reportes', authenticate, reportRateLimit, reportController.generate);
+```
+
+---
+
+## 11. Headers de Seguridad — Express (helmet)
+
+```typescript
+// api/app.ts — configuración obligatoria
+import helmet from 'helmet';
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // necesario para Tailwind CSS
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  noSniff: true,
+  xssFilter: true,
+  frameguard: { action: 'deny' },
+  referrerPolicy: { policy: 'no-referrer' },
+}));
+
+// Ocultar tecnología en headers de respuesta
+app.disable('x-powered-by'); // Elimina header "X-Powered-By: Express"
+```
+
+---
+
+## 12. Manejo de Errores — Sin Exponer Internos en Producción
+
+```typescript
+// api/middleware/errorHandler.middleware.ts
+import { DomainError } from '@domain/shared/errors/DomainError';
+
+export function globalErrorHandler(
+  err: Error,
+  req: Request,
+  res: Response,
+  _next: NextFunction
+): void {
+  const correlationId = req.correlationId ?? 'unknown';
+
+  if (err instanceof DomainError) {
+    // Error de dominio conocido — retornar código y mensaje para el usuario
+    logger.warn('Domain error', {
+      correlationId,
+      errorCode: err.code,
+      httpStatus: err.httpStatus,
+      // NO loggear err.context si contiene PII
+    });
+    res.status(err.httpStatus).json({
+      error: err.code,
+      message: err.message,   // mensaje en español boliviano
+      correlationId,
+    });
+    return;
+  }
+
+  // Error inesperado — loggear internamente, responder genéricamente
+  logger.error('Unhandled error', {
+    correlationId,
+    errorType: err.constructor.name,
+    // err.message: loggear solo si no contiene PII
+    // err.stack: NUNCA en producción en la respuesta
+  });
+
+  res.status(500).json({
+    error: 'INTERNAL_ERROR',
+    correlationId,
+    // NADA MÁS — ni message, ni stack, ni query SQL
+  });
+}
+```
+
+---
+
+## 13. MUST / MUST NOT — Checklist Completo de Seguridad
+
+### MUST
+```
+☑ Extraer docenteId SIEMPRE del JWT (req.user.userId), NUNCA de req.params en boletas
+☑ Llamar assertOwnData() como PRIMERA línea en endpoints de datos personales
+☑ Usar bcrypt cost factor ≥ 12 para hashing de contraseñas
+☑ Validar inputs con Zod ANTES de pasar al dominio
+☑ Retornar mensaje de error genérico en login (no especificar si falló email o password)
+☑ Incluir correlationId en todas las respuestas de error
+☑ Usar helmet() en Express con la configuración de §11
+☑ Configurar TLS 1.2+ en Nginx con headers de seguridad de §6.2
+☑ Registrar en log de auditoría todo acceso a boletas, DJ campos y perfil completo
+☑ Bloquear cuenta tras 5 intentos fallidos (RB-07) — $transaction atómica
+☑ Rotar JWT_SECRET semestralmente
+☑ Validar que JWT_SECRET tiene ≥ 32 caracteres al startup
+```
+
+### MUST NOT
+```
+✗ Loggear campos de PII_FIELDS en NINGÚN entorno (dev, staging, producción)
+✗ Incluir stack traces o mensajes técnicos en respuestas HTTP de producción
+✗ Almacenar secretos en código fuente o variables hardcodeadas
+✗ Usar localStorage para almacenar JWT en el frontend
+✗ Exponer el docenteId de boletas en URLs (query params o path params)
+✗ Usar MD5, SHA1 o SHA256 sin salt para contraseñas
+✗ Retornar datos de otro docente sin verificar RB-04
+✗ Permitir requests sin autenticación a endpoints de datos (excepción: /auth/login, /health)
+✗ Omitir validación de schema Zod en controladores
+✗ Commitear archivos .env al repositorio
+```
+
+---
+
+## 14. Registro de Cambios
+
+| Versión | Fecha | Autor | Cambio |
+|---------|-------|-------|--------|
+| 0.1.0 | 10/05/2026 | Carolina Aguilar | Versión inicial |
+| 1.0.0 | 10/05/2026 | Carolina Aguilar | Versión completa: §3 restricciones absolutas, §5 bcrypt/JWT, §7 gestión de secretos, §8 validación Zod, §9 auditoría de acceso, §10 rate limiting, §11 helmet, §12 error handling, §13 checklist completo |
