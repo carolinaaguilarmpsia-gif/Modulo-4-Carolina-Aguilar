@@ -1,0 +1,13 @@
+{
+  "name": "sgai-demo-dj",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "demo:dj": "tsx dj-core/run-demo.ts",
+    "test:domain": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.config.cjs 2>/dev/null || echo 'Opcional: npm i -D jest ts-jest @types/jest en raíz'"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.4.0"
+  }
+}

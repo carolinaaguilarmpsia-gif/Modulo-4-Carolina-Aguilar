@@ -1,0 +1,34 @@
+# Dependencias
+node_modules/
+
+# Build / output
+dist/
+build/
+coverage/
+
+# Variables de entorno — NUNCA commitear claves (docs/SKILLS/auth-rbac-guard.md, tarea IA rung 0)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Estado runtime del orquestador (Nivel 5) — no es código ni dato semilla, se regenera solo.
+backend/data/conversaciones.json
+
+# macOS
+.DS_Store
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Configuración local de herramientas de IA — no se sube al repo
+.claude/
+.cursor/
+
+# TypeScript
+*.tsbuildinfo
