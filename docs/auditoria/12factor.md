@@ -50,7 +50,7 @@
 ## 1. Datos del repositorio (oleada 0)
 
 - **Grupo:** DPA (SGAI — Sistema de Gestión Académica)
-- **Repositorio:** https://github.com/carolinaaguilarmpsia-gif/Modulo-6-Carolina-Aguilar (remoto `modulo6`, rama `agent-mcp`)
+- **Repositorio:** https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar (remoto `origin`, rama `release/8.0.0`, creada sobre el HEAD de `agent-mcp`)
 - **Commit auditado (`release/8.0.0`):** `62da628d8ed4b445ebfaf2027b40049b4e4c52df` (HEAD de `agent-mcp`). **Aviso:** la rama/etiqueta `release/8.0.0` aún no existe y el árbol de trabajo tiene 59 entradas sin commitear; la auditoría se hizo con `git grep` (solo archivos versionados en el commit/índice) y no se modificó ningún archivo del producto.
 - **Fecha de la auditoría:** 2026-10-15
 - **Stack detectado:** Node.js + TypeScript (ESM, `tsx`) · Express 4 · JWT + bcrypt · `express-rate-limit` · React 18 + Vite (frontend) · Jest, Supertest, Playwright. **No hay base de datos, cola ni caché reales**: usuarios y DJ en memoria (`InMemory*Repository`), catálogo en `db.json`, estado del orquestador en `backend/data/conversaciones.json`. IA: Groq (HTTP), Ollama local (HTTP), Gemini (adaptador sin uso), servidor MCP en proceso.
