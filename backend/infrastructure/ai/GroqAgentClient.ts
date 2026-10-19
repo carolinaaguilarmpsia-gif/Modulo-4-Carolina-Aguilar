@@ -1,5 +1,6 @@
 import type { IAgentLlmClient } from '../../domain/agente-dj/ports/out/IAgentLlmClient.js';
 import type { AgentLlmTurn, AgentMessage, AgentToolCall, AgentToolDef } from '../../domain/agente-dj/types/Agente.js';
+import { fetchConTimeout } from './fetchConTimeout.js';
 
 interface GroqToolCallWire {
   id: string;
@@ -69,7 +70,7 @@ export class GroqAgentClient implements IAgentLlmClient {
    * reintenta UNA vez — nunca más, para no convertir esto en un loop de reintentos infinito.
    */
   private async intentarTurno(mensajes: AgentMessage[], herramientas: AgentToolDef[], permitirReintento: boolean): Promise<AgentLlmTurn> {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetchConTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

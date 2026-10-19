@@ -1,4 +1,5 @@
 import type { IEmbeddingsClient } from '../../domain/tramites-dpa/ports/out/IEmbeddingsClient.js';
+import { fetchConTimeout } from './fetchConTimeout.js';
 
 interface OllamaEmbeddingsResponse {
   embedding: number[];
@@ -18,7 +19,7 @@ export class OllamaEmbeddingsClient implements IEmbeddingsClient {
   ) {}
 
   async embed(texto: string): Promise<number[]> {
-    const res = await fetch(`${this.host}/api/embeddings`, {
+    const res = await fetchConTimeout(`${this.host}/api/embeddings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: this.model, prompt: texto }),

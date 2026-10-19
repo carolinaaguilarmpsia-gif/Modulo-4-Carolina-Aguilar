@@ -1,4 +1,5 @@
 import type { ILlmClient } from '../../domain/asistente-ia/ports/out/ILlmClient.js';
+import { fetchConTimeout } from './fetchConTimeout.js';
 
 interface GroqChatResponse {
   choices?: { message?: { content?: string } }[];
@@ -22,7 +23,7 @@ export class GroqClient implements ILlmClient {
   }
 
   async preguntar(prompt: string): Promise<string> {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await fetchConTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import type { ILlmClient } from '../../domain/asistente-ia/ports/out/ILlmClient.js';
+import { fetchConTimeout } from './fetchConTimeout.js';
 
 interface OllamaGenerateResponse {
   response: string;
@@ -19,7 +20,7 @@ export class OllamaClient implements ILlmClient {
   ) {}
 
   async preguntar(prompt: string): Promise<string> {
-    const res = await fetch(`${this.host}/api/generate`, {
+    const res = await fetchConTimeout(`${this.host}/api/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -41,6 +40,8 @@ import { createAgenteDjRouter } from './routes/agenteDj.routes.js';
 import { createOrquestadorRouter } from './routes/orquestador.routes.js';
 import { createAuthRouter } from './routes/auth.routes.js';
 import { createDjRouter } from './routes/dj.routes.js';
+import { resolverJwtSecret } from '../infrastructure/config/jwtSecret.js';
+import { leerCorsOrigins } from '../infrastructure/config/corsOrigins.js';
 
 // Ruta absoluta relativa a este archivo (backend/api/app.ts), no a process.cwd() —
 // el server se invoca a veces desde la raíz del repo, a veces desde backend/, y
@@ -54,11 +55,7 @@ const controller = new DjController(service);
 
 // @see docs/SKILLS/auth-rbac-guard.md — MUST NOT hardcodear secretos.
 // Sin JWT_SECRET en .env, se genera uno efímero por proceso (válido solo para esta demo local).
-let jwtSecret = process.env.JWT_SECRET;
-if (!jwtSecret) {
-  jwtSecret = randomBytes(32).toString('hex');
-  console.warn('[SGAI] JWT_SECRET no configurado en .env — usando secreto efímero solo para desarrollo local.');
-}
+const jwtSecret = resolverJwtSecret();
 
 const usuarioRepository = new InMemoryUsuarioRepository();
 const jwtSigner = new JwtSigner(jwtSecret);
@@ -133,15 +130,10 @@ const orquestadorController = new OrquestadorController(orquestadorService);
 
 export const app = express();
 
-// 5173/5174: Vite salta al siguiente puerto libre si el 5173 ya está ocupado por otra cosa.
+// CORS_ORIGINS (lista separada por comas); sin ella, los orígenes de desarrollo de Vite (5173/5174).
 app.use(
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:5174',
-      'http://127.0.0.1:5174',
-    ],
+    origin: leerCorsOrigins(),
   })
 );
 app.use(express.json());

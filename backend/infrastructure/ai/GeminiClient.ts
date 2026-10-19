@@ -1,4 +1,5 @@
 import type { ILlmClient } from '../../domain/asistente-ia/ports/out/ILlmClient.js';
+import { fetchConTimeout } from './fetchConTimeout.js';
 
 interface GeminiGenerateResponse {
   candidates?: {
@@ -27,7 +28,7 @@ export class GeminiClient implements ILlmClient {
   }
 
   async preguntar(prompt: string): Promise<string> {
-    const res = await fetch(
+    const res = await fetchConTimeout(
       `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent`,
       {
         method: 'POST',
