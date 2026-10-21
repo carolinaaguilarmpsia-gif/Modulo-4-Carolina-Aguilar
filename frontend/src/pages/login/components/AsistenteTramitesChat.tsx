@@ -166,6 +166,8 @@ export function AsistenteTramitesChat() {
         {mensajes.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div
+              data-testid="chat-message"
+              data-role={m.role}
               className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                 m.role === 'user'
                   ? 'bg-institucional-700 text-white'

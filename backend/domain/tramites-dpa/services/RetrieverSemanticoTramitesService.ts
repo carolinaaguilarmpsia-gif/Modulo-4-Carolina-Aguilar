@@ -3,12 +3,24 @@ import type { TramiteConDepartamento } from '../types/Tramite.js';
 
 /**
  * Cuánto tiene que parecerse la pregunta al trámite más cercano para confiar en el match.
- * Empírico con nomic-embed-text + cosine similarity sobre trámites en español: 0.5 separa bien
- * una pregunta relacionada ("¿qué necesito para una constancia laboral?" ~0.6-0.7 contra DPA-01)
- * de una que no tiene nada que ver ("¿cuánto gana un docente?" ~0.3-0.4 contra cualquier trámite).
- * Ajustable — si en producción da falsos positivos, subirlo; si descarta matches válidos, bajarlo.
+ *
+ * v3 (evals offline M7, dataset dorado de 18 casos, nomic-embed-text): 0.5 era demasiado laxo.
+ * Medido: las preguntas que SÍ son de un trámite recuperan el correcto con 0.71–0.83; las que no
+ * lo son (inversiones 0.61, pasaporte 0.52, inyección de prompt 0.67, datos personales 0.68) quedan
+ * por debajo de 0.70 pero por encima de 0.5, por eso con 0.5 devolvían un trámite cualquiera.
+ * Límite honesto: el hueco entre 0.68 (peor no-trámite) y 0.71 (peor trámite real) es angosto y
+ * se midió sobre 18 casos; al crecer el dataset (S11, monitoreo) hay que volver a medirlo.
+ * @see evals/README.md · evals/resultados/
  */
-const UMBRAL_SIMILITUD = 0.5;
+export const UMBRAL_SIMILITUD = 0.7;
+
+/**
+ * v3 — piso de corroboración para el LLM-router. El 3B propone un trámite; la similitud semántica
+ * lo corrobora o lo veta. Medido: el trámite que el LLM elegía para «¿cómo saco mi pasaporte?»
+ * (DPA-01) da 0.47; el correcto para una orden real de designación (DCA-04) da 0.68.
+ * Límite honesto: dos puntos de medición, no una curva. Revisar con más casos (S11).
+ */
+export const UMBRAL_CORROBORACION_LLM = 0.55;
 
 export interface MatchSemantico {
   codigo: string;
@@ -62,7 +74,8 @@ export class RetrieverSemanticoTramitesService {
 
   constructor(
     private readonly embeddings: IEmbeddingsClient,
-    private readonly tramites: TramiteConDepartamento[]
+    private readonly tramites: TramiteConDepartamento[],
+    private readonly umbral: number = UMBRAL_SIMILITUD
   ) {}
 
   async buscar(pregunta: string): Promise<MatchSemantico | null> {
@@ -76,7 +89,14 @@ export class RetrieverSemanticoTramitesService {
       }
     }
 
-    return mejor && mejor.similitud >= UMBRAL_SIMILITUD ? mejor : null;
+    return mejor && mejor.similitud >= this.umbral ? mejor : null;
+  }
+
+  /** Similitud coseno entre la pregunta y UN trámite concreto (para corroborar la decisión del LLM). */
+  async similitudCon(pregunta: string, codigo: string): Promise<number> {
+    const [indice, vectorPregunta] = await Promise.all([this.obtenerIndice(), this.embeddings.embed(pregunta)]);
+    const chunk = indice.find((c) => c.codigo === codigo);
+    return chunk ? similitudCoseno(vectorPregunta, chunk.vector) : 0;
   }
 
   private obtenerIndice(): Promise<ChunkIndexado[]> {

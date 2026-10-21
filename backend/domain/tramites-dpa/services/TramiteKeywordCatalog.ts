@@ -9,6 +9,8 @@ const PREFIJOS_GENERICOS = [
   'emisión de',
   'emision de',
   'nombramiento de',
+  // Sin "de": "Nombramiento Docente Investigador" debe matchear "nombramiento de docente investigador" (bug medido en evals EV-008).
+  'nombramiento',
   'designación de',
   'designacion de',
   'designación temporal en',

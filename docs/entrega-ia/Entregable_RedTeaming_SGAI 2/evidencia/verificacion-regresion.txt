@@ -1,0 +1,17 @@
+===== SIN la mitigación: AI-SEC-001 · listar con el alcance del actor =====
+      ✕ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (6 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función
+      ✓ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (2 ms)
+Tests:       1 failed, 8 skipped, 2 passed, 11 total
+
+===== SIN la mitigación: AI-SEC-002 · verificar dueño de la conversación =====
+      ✓ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (5 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función (1 ms)
+      ✕ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (2 ms)
+Tests:       1 failed, 8 skipped, 2 passed, 11 total
+
+===== CON las mitigaciones (código actual) =====
+      ✓ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (7 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función (1 ms)
+      ✓ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (2 ms)
+Tests:       8 skipped, 3 passed, 11 total

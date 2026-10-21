@@ -73,7 +73,12 @@ describe('buscarDocentePorNombre', () => {
     }
   });
 
-  it('nunca deja pasar un ValidationError donde se espera NotFoundError (sanity de tipos de error)', async () => {
+  // OMITIDO (Actividad 2 — duplicados): mismo `buscarDocentePorNombre(repo, 'Juan Jaldim')` que el
+  // test de arriba ("sin coincidencia exacta pero con un nombre parecido..."), que ya afirma
+  // `toBeInstanceOf(NotFoundError)` — y NotFoundError/ValidationError son subclases hermanas de
+  // DomainError (nunca una es instancia de la otra), así que "rejects.not.toBeInstanceOf(ValidationError)"
+  // no agrega ninguna cobertura sobre el mismo input. Se deja en el repo, sin ejecutar.
+  it.skip('nunca deja pasar un ValidationError donde se espera NotFoundError (sanity de tipos de error)', async () => {
     await expect(buscarDocentePorNombre(repo, 'Juan Jaldim')).rejects.not.toBeInstanceOf(ValidationError);
   });
 });

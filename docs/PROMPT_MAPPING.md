@@ -45,3 +45,23 @@
 | MRD-N-010 | PRD roadmap v2.0 | — | §8.5 AWS | ADR-0005 |
 
 Ver `docs/TRAZABILIDAD_COMPLETA.md`.
+
+---
+
+## 4. PR-IMPL — Prompts de implementación (capa viva, `release/3.0.0`+)
+
+> Continuación de §2 para la fase de implementación asistida por IA sobre `docs/product/` y `backend/`/`frontend/`. Cada entrada está trazada a un `FSD-UC`, un Design Doc (`DD-UC-NNN`) y, si corresponde, un ADR. Ver modelo en `docs/MODELO_DOCUMENTAL_IMPLEMENTACION.md`.
+
+| Símbolo | Archivo | FSD-UC | Design Doc | ADR | Artefacto |
+|---------|---------|--------|------------|-----|-----------|
+| PR-IMPL-001 | `docs/prompts/impl/PR-IMPL-001.md` | FSD-UC-002 | DD-UC-001 | — | `backend/domain/declaracion-jurada/**` (entidad, FSM, service, puertos, tests) |
+| PR-IMPL-002 | `docs/prompts/impl/PR-IMPL-002.md` | FSD-UC-002 | DD-UC-001 | — | `backend/api/**`, `backend/infrastructure/{persistence,notifications}/**`, `frontend/src/pages/declaraciones-juradas/**` |
+| PR-IMPL-003 | `docs/prompts/impl/PR-IMPL-003.md` | FSD-UC-001 | DD-UC-002 | — | `backend/domain/administracion/**` (entidad `Usuario`, `AutenticarUsuarioService`, puertos, tests) — **ejecutado, 100% cobertura** |
+| PR-IMPL-004 | `docs/prompts/impl/PR-IMPL-004.md` | FSD-UC-001 | DD-UC-002 | — | `backend/api/{controllers,routes,validators,middleware}/auth.*`, `backend/infrastructure/auth/**` — **ejecutado, probado end-to-end** |
+
+**Cadena de trazabilidad código → FSD-UC → DD-UC → PR-IMPL → DTP:**
+
+- `FSD-UC-002` (`docs/product/FSD.md` UC-L-01 / `docs/baseline/FSD.md` §4.2) → `DD-UC-001` (`docs/design/DD-UC-001.md`) → `PR-IMPL-001` + `PR-IMPL-002` → `backend/domain/declaracion-jurada/**`, `backend/api/**`, `backend/infrastructure/**`, `frontend/src/pages/declaraciones-juradas/**` → `docs/product/DTP.md` §A.1/§A.3.
+- `FSD-UC-001` (`docs/product/FSD.md` M-AUTH / `docs/baseline/FSD.md` §4.1) → `DD-UC-002` (`docs/design/DD-UC-002.md`) → `PR-IMPL-003` + `PR-IMPL-004` → `backend/domain/administracion/**`, `backend/api/{controllers,routes,validators,middleware}/auth.*`, `backend/infrastructure/auth/**` → `AutenticarUsuarioService.test.ts` (100% cobertura) → `docs/product/DTP.md` §A.1/§A.3.
+
+**Verificación baseline**: ninguna entrada de esta sección referencia ni modifica archivos bajo `docs/baseline/`.

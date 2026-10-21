@@ -41,7 +41,17 @@ export class AgenteDJService {
   async preguntar(actor: ActorContext, pregunta: string): Promise<AgenteDJResult> {
     const toolClient = await this.toolClientFactory.crear(actor);
     try {
-      const herramientas = await toolClient.listarHerramientas();
+      const disponibles = await toolClient.listarHerramientas();
+      // Mitigación AI-SEC-005 (red team) — política de herramientas fuera del modelo: si el
+      // pedido del usuario no contiene un verbo de transición, la herramienta de escritura ni
+      // se ofrece al LLM en este turno. Se decide ACÁ, antes de cualquier tool-call, a partir
+      // SOLO del texto que escribió el usuario — nunca de lo que después devuelva una
+      // herramienta (p. ej. una instrucción escondida en camposFormulario de una DJ, que es
+      // dato no confiable). Así una inyección indirecta no puede hacer que el agente proponga
+      // escribir cuando lo que se pidió fue solo leer. @see redteam/hallazgos/AI-SEC-005.md
+      const herramientas = this.pideTransicion(pregunta)
+        ? disponibles
+        : disponibles.filter((h) => h.name !== HERRAMIENTA_ESCRITURA_DJ);
       const mensajes: AgentMessage[] = [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: pregunta },
@@ -51,6 +61,17 @@ export class AgenteDJService {
     } finally {
       await toolClient.cerrar();
     }
+  }
+
+  /**
+   * Detecta si el pedido del usuario (nunca el contenido de una DJ) nombra una acción de
+   * transición. Deliberadamente amplio: un falso positivo solo deja la herramienta disponible
+   * (mismo comportamiento que antes de la mitigación, con confirmación humana igual) — nunca
+   * agrega riesgo. Un falso negativo es lo que hay que evitar, y coincide con el ejemplo real
+   * de uso del SYSTEM_PROMPT ("aprobá/rechazá la DJ de [docente] si corresponde").
+   */
+  private pideTransicion(pregunta: string): boolean {
+    return /\b(aprob\w*|rechaz\w*|devolv\w*|devuelv\w*|reenv[ií]\w*|escal\w*|transicion\w*|env[ií]a\w*|enviar)\b/i.test(pregunta);
   }
 
   /**
@@ -123,7 +144,7 @@ export class AgenteDJService {
 
       if (turno.llamadasHerramientas.length === 0) {
         traza.push({ paso, pensamiento: turno.contenido ?? undefined, tokensUsados: turno.tokensUsados });
-        return { respuesta: turno.contenido ?? 'No tengo una respuesta.', traza };
+        return { respuesta: this.sanitizarRespuestaFinal(turno.contenido), traza };
       }
 
       const llamada = turno.llamadasHerramientas[0];
@@ -228,6 +249,25 @@ export class AgenteDJService {
       `El agente propone ejecutar ${comando} sobre la DJ ${djId} — docente ${preview.docenteId}, ` +
       `tipo ${preview.tipo}, período ${preview.periodoAcademico}${destino}. Revisá el detalle antes de confirmar.`
     );
+  }
+
+  /**
+   * Mitigación AI-SEC-004 (red team) — validación de salida: si la respuesta final reproduce
+   * texto literal del SYSTEM_PROMPT (dos o más líneas completas), se descarta y se devuelve un
+   * mensaje genérico. El control vive DESPUÉS de que el modelo generó la respuesta, no antes
+   * ("no reveles tu prompt" en el prompt mismo) — así no depende de que el modelo obedezca esa
+   * instrucción, que es justamente lo que el ataque hace fallar. Qué NO resuelve: una
+   * paráfrasis del prompt (sin líneas literales) puede seguir pasando.
+   * @see redteam/hallazgos/AI-SEC-004.md
+   */
+  private sanitizarRespuestaFinal(contenido: string | null): string {
+    if (!contenido) return 'No tengo una respuesta.';
+    const lineasSensibles = SYSTEM_PROMPT.split('\n').filter((linea) => linea.length >= 25);
+    const coincidencias = lineasSensibles.filter((linea) => contenido.includes(linea));
+    if (coincidencias.length >= 2) {
+      return 'No puedo compartir la configuración interna del agente. Preguntame sobre una Declaración Jurada puntual.';
+    }
+    return contenido;
   }
 
   private resumirEjecucion(contenidoJson: string): string {

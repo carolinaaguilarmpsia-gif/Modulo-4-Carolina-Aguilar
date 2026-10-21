@@ -32,3 +32,8 @@ backend/data/conversaciones.json
 
 # TypeScript
 *.tsbuildinfo
+
+# Playwright E2E — artefactos generados por cada corrida (el reporte final se adjunta aparte)
+playwright-report/
+test-results/
+blob-report/

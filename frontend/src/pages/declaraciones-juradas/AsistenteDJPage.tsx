@@ -20,7 +20,7 @@ function TrazaPanel({ traza }: { traza: PasoTraza[] }) {
   if (traza.length === 0) return null;
 
   return (
-    <details className="mt-2 rounded-md border border-slate-200 bg-white">
+    <details data-testid="traza-panel" className="mt-2 rounded-md border border-slate-200 bg-white">
       <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
         Ver traza ({traza.length} {traza.length === 1 ? 'paso' : 'pasos'})
       </summary>
@@ -114,7 +114,7 @@ function ConfirmacionCard({
   if (!datos.confirmacionPendiente) return null;
 
   return (
-    <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+    <div data-testid="confirmacion-pendiente" className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
       <p className="text-sm font-semibold text-amber-900">Confirmación requerida</p>
       <p className="mt-1 text-sm text-amber-900">{datos.confirmacionPendiente.resumen}</p>
       {datos.confirmacionPendiente.preview ? <DJPreviewCard preview={datos.confirmacionPendiente.preview} /> : null}
@@ -210,6 +210,8 @@ export function AsistenteDJPage() {
           {mensajes.map((m) => (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
+                data-testid="chat-message"
+                data-role={m.role}
                 className={`max-w-[90%] rounded-lg px-3 py-2 text-sm ${
                   m.role === 'user' ? 'bg-institucional-700 text-white' : m.esError ? 'bg-red-50 text-red-900' : 'bg-slate-100 text-slate-900'
                 }`}

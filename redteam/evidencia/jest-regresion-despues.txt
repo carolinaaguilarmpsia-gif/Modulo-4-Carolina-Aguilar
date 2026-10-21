@@ -1,0 +1,22 @@
+(node:45576) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+PASS backend/domain/orquestador-atencion/services/OrquestadorAtencionService.test.ts
+  OrquestadorAtencionService
+    ✓ un docente pregunta por sus propias DJ sin necesitar identificarse — usa actor.userId directo (6 ms)
+    ✓ un admin pregunta por un docente puntual — lo identifica por nombre y persiste el id para el próximo turno (2 ms)
+    ✓ nombre no encontrado — responde con las sugerencias reales, no un error genérico (2 ms)
+    ✓ admin sin mencionar ningún nombre — pide identificación en vez de buscar con el mensaje entero
+    ✓ reportar un problema escala a un humano y marca la conversación como ESCALADA (1 ms)
+    ✓ una conversación ya ESCALADA nunca vuelve a pasar por el clasificador — regla de negocio, no técnica
+    ✓ una intención no reconocida pide aclaración en vez de inventar una respuesta (1 ms)
+    ✓ cada turno se persiste — la conversación acumula historial real, no se pierde entre llamadas
+    regresión red team (redteam/hallazgos/AI-SEC-001.md)
+      ✓ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (1 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función (1 ms)
+      ✓ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (1 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       11 passed, 11 total
+Snapshots:   0 total
+Time:        1.753 s, estimated 2 s
+Ran all test suites matching /backend\/domain\/orquestador-atencion\/services\/OrquestadorAtencionService.test.ts/i.

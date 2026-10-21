@@ -1,0 +1,5 @@
+La presentación (17 diapositivas) está en Claude, no se puede empaquetar automáticamente en este ZIP:
+
+https://claude.ai/artifact/HmWUBFYoLApJXddpCnB3eD
+
+Para incluirla: abrí el enlace, descargala como PowerPoint o PDF (menú de descarga arriba a la derecha de la página) y agregala a esta carpeta.

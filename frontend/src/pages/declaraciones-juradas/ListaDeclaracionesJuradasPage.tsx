@@ -87,7 +87,7 @@ export function ListaDeclaracionesJuradasPage() {
             </thead>
             <tbody>
               {items.map((dj) => (
-                <tr key={dj.id} className="border-t border-slate-100">
+                <tr key={dj.id} data-testid={`dj-row-${dj.id}`} className="border-t border-slate-100">
                   <td className="px-4 py-3 font-medium">{dj.periodoAcademico}</td>
                   <td className="px-4 py-3">{dj.tipo}</td>
                   <td className="px-4 py-3">

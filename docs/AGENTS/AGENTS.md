@@ -25,18 +25,37 @@ autora: Carolina Aguilar
 
 ### 0.1 Índice de documentos
 
+**Baseline congelado (M4, `release/2.0.0`) — NUNCA editar, ver §0.2:**
+
 | Tipo | Ruta |
 |------|------|
-| BRD | `docs/brd/BRD_vFinal.md` |
-| MRD | `docs/mrd/MRD_vFinal.md` |
-| PRD | `docs/prd/PRD_vFinal.md` |
-| FSD | `docs/fsd/FSD_vFinal.md` |
-| DTI | `docs/DTI.md` |
-| ADRs | `docs/adr/0001`–`0006` |
+| BRD | `docs/baseline/BRD.md` |
+| MRD | `docs/baseline/MRD.md` |
+| PRD | `docs/baseline/PRD.md` |
+| FSD | `docs/baseline/FSD.md` |
+| DTI vFinal | `docs/baseline/DTI_vFinal.md` |
+
+**Capa viva (implementación, `release/3.0.0`+) — aquí van todos los cambios:**
+
+| Tipo | Ruta |
+|------|------|
+| PRD vivo | `docs/product/PRD.md` |
+| FSD vivo (LFSD ⚡) | `docs/product/FSD.md` |
+| DTP (continuación viva del DTI) | `docs/product/DTP.md` |
+| Design docs por feature | `docs/design/DD-UC-*.md` |
+| ADRs | `docs/ADR/0001`–`0006` |
+| Prompts de implementación | `docs/prompts/impl/PR-IMPL-*.md` |
 | Trazabilidad | `docs/TRAZABILIDAD_COMPLETA.md` |
 | Entrega Módulo 4 | `docs/ENTREGA_MODULO4_CUMPLIMIENTO.md` |
-| Prompts IA | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` |
+| Prompts IA (M4) | `docs/PROMPT_MAPPINGS/PROMPT_MAPPINGS_v1.md` |
 | Aportes | `docs/aportes_release_1_0_0.md` |
+| Modelo documental | `docs/MODELO_DOCUMENTAL_IMPLEMENTACION.md` |
+
+### 0.2 Protección del baseline congelado (regla de oro)
+
+- **NUNCA editar archivos bajo `docs/baseline/`.** Registro histórico evaluado de M4, recuperable en el tag `release/2.0.0`. Cualquier intento de edición debe bloquearse.
+- **Todo cambio va a la capa viva** (`docs/product/*`), más el design doc (`docs/design/DD-UC-NNN.md`) y el ADR si la decisión es significativa o costosa de revertir.
+- **Cero divergencia silenciosa**: código que contradice el DTI vFinal exige actualizar primero ADR + `docs/product/DTP.md` §A.2 + la spec viva.
 
 ---
 
@@ -187,7 +206,7 @@ Contratos API: FSD §8. Mapa completo: FSD §4.11.
 
 ---
 
-## 5. Skills Accionables (8)
+## 5. Skills Accionables (10)
 
 Ruta: `docs/SKILLS/`. Cada skill tiene **procedimiento**, **MUST/MUST NOT** y **checklist de salida**.
 
@@ -201,6 +220,8 @@ Ruta: `docs/SKILLS/`. Cada skill tiene **procedimiento**, **MUST/MUST NOT** y **
 | 6 | `nfr-compliance.md` | Revisión NFR en PR |
 | 7 | `mermaid-architect.md` | Crear/editar `.mmd` |
 | 8 | `spec-traceability-checker.md` | IDs, matriz, nuevos UC |
+| 9 | `feature-design-doc.md` | Crear/actualizar `DD-UC-NNN` para un FSD-UC en implementación |
+| 10 | `dtp-sync.md` | Sincronizar `docs/product/DTP.md` + specs vivas tras un PR de código |
 
 ---
 

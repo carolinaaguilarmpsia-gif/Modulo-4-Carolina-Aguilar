@@ -4,7 +4,7 @@ import { buscarDocentePorNombre } from '../../administracion/services/BuscarDoce
 import type { IUsuarioRepository } from '../../administracion/ports/out/IUsuarioRepository.js';
 import type { DeclaracionJuradaService } from '../../declaracion-jurada/services/DeclaracionJuradaService.js';
 import type { ActorContext } from '../../declaracion-jurada/types/CrearDJ.js';
-import { NotFoundError, ValidationError } from '../../shared/errors/DomainError.js';
+import { ForbiddenError, NotFoundError, ValidationError } from '../../shared/errors/DomainError.js';
 import type { AsistenteTramitesService } from '../../tramites-dpa/services/AsistenteTramitesService.js';
 import type { IConversacionRepository } from '../ports/out/IConversacionRepository.js';
 import type { IEscalamientoPublisher } from '../ports/out/IEscalamientoPublisher.js';
@@ -114,12 +114,18 @@ export class OrquestadorAtencionService {
 
     conversacion.docenteId = docenteId;
 
-    // DeclaracionJuradaService.listar ya sabe filtrar "solo lo del docente" cuando el actor es
-    // DOCENTE — se reusa esa regla en vez de reimplementarla acá con un filtro propio.
-    const { items } = await this.djService.listar({ userId: docenteId, rol: Rol.DOCENTE });
+    // Mitigación AI-SEC-001 (red team): el LLM elige DE QUIÉN se pregunta, nunca CON QUÉ PERMISOS
+    // se consulta. Antes se llamaba listar({ userId: docenteId, rol: DOCENTE }) — o sea, se
+    // consultaba "como si fuera" el docente nombrado, y un ADMIN_FACULTAD veía DJ de otra facultad.
+    // Ahora se lista con el actor autenticado (DeclaracionJuradaService.listar ya aplica RB-05:
+    // DOCENTE → solo lo propio, ADMIN_FACULTAD → solo su facultad) y recién ahí se filtra por docente.
+    // @see RB-05 · redteam/hallazgos/AI-SEC-001.md
+    const { items: visibles } = await this.djService.listar(actor, { page: 1, pageSize: 100 });
+    const items = visibles.filter((dj) => dj.docenteId === docenteId);
+    // Mismo mensaje exista o no el docente fuera del alcance — no confirma nada a quien no debe ver.
     const texto =
       items.length === 0
-        ? 'No hay declaraciones juradas registradas para ese docente.'
+        ? 'No hay declaraciones juradas de ese docente dentro de tu alcance.'
         : items.map((dj) => `${dj.periodoAcademico} (${dj.tipo}): ${dj.estado}`).join('\n');
 
     return this.responderYGuardar(conversacion, mensaje, Intencion.CONSULTA_ESTADO_DJ, 'consultar_dj', texto);
@@ -166,6 +172,12 @@ export class OrquestadorAtencionService {
   private async cargarOCrear(actor: ActorContext, conversacionId?: string): Promise<ConversacionEstado> {
     if (conversacionId) {
       const existente = await this.conversaciones.obtener(conversacionId);
+      // Mitigación AI-SEC-002 (aislamiento de contexto): el conversacionId lo manda el cliente, así
+      // que no alcanza con que exista — tiene que ser del mismo usuario. Si no, heredaría el
+      // docenteId y el historial de otra persona.
+      if (existente && existente.actorUserId !== actor.userId) {
+        throw new ForbiddenError('CONVERSACION_AJENA');
+      }
       if (existente) return existente;
     }
     const ahora = new Date().toISOString();

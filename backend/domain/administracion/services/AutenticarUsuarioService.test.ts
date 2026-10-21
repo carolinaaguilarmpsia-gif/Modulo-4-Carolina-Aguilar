@@ -161,7 +161,12 @@ describe('AutenticarUsuarioService', () => {
     expect(result.token).toBe('signed-token');
   });
 
-  it('MUST ser instancia de ForbiddenError para ACCOUNT_LOCKED', async () => {
+  // OMITIDO (Actividad 2 — duplicados): mismo `autenticar()`, misma DJ bloqueada, mismo password
+  // irrelevante que el test de arriba ("MUST rechazar sin validar password si la cuenta ya está
+  // bloqueada"). Ese test ya afirma `code: 'ACCOUNT_LOCKED', httpStatus: 403` — y ForbiddenError
+  // (@see DomainError.ts) siempre construye con httpStatus=403, así que `toBeInstanceOf(ForbiddenError)`
+  // no verifica nada que el `toMatchObject` de arriba no cubra ya. Se deja en el repo, sin ejecutar.
+  it.skip('MUST ser instancia de ForbiddenError para ACCOUNT_LOCKED', async () => {
     const repo = new FakeUsuarioRepository(crearUsuario({ bloqueadoHasta: new Date(Date.now() + 60_000) }));
     const service = new AutenticarUsuarioService(repo, new FakeLdap(LDAP_NO_DISPONIBLE), new FakeHasher(), new FakeJwtSigner());
 

@@ -1,0 +1,46 @@
+===== SIN la mitigación: AI-SEC-001 · listar con el alcance del actor =====
+      ✕ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (6 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función
+      ✓ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (2 ms)
+Tests:       1 failed, 8 skipped, 2 passed, 11 total
+
+===== SIN la mitigación: AI-SEC-002 · verificar dueño de la conversación =====
+      ✓ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (6 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función
+      ✕ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (3 ms)
+Tests:       1 failed, 8 skipped, 2 passed, 11 total
+
+===== SIN la mitigación: AI-SEC-005 · no ofrecer la herramienta de escritura sin pedido explícito =====
+      ✕ AI-SEC-005: un pedido de solo lectura nunca recibe la herramienta de escritura, aunque el contenido leído la sugiera (5 ms)
+      ✓ AI-SEC-005 (línea base): un pedido real de aprobar/rechazar sigue recibiendo la herramienta de escritura (1 ms)
+      ✓ AI-SEC-004: una respuesta que reproduce el prompt del sistema nunca llega al usuario (1 ms)
+      ✓ AI-SEC-004 (línea base): una respuesta normal, que no reproduce el prompt, pasa sin cambios (1 ms)
+Tests:       1 failed, 9 skipped, 3 passed, 13 total
+
+===== SIN la mitigación: AI-SEC-004 · validar la salida contra ecos del prompt =====
+      ✓ AI-SEC-005: un pedido de solo lectura nunca recibe la herramienta de escritura, aunque el contenido leído la sugiera (3 ms)
+      ✓ AI-SEC-005 (línea base): un pedido real de aprobar/rechazar sigue recibiendo la herramienta de escritura
+      ✕ AI-SEC-004: una respuesta que reproduce el prompt del sistema nunca llega al usuario (1 ms)
+      ✓ AI-SEC-004 (línea base): una respuesta normal, que no reproduce el prompt, pasa sin cambios
+Tests:       1 failed, 9 skipped, 3 passed, 13 total
+
+===== SIN la mitigación: AI-SEC-007 · filtrar credenciales y correos externos en la salida =====
+      ✕ un requisito que pide la contraseña del SII y un correo externo nunca llega a la respuesta (4 ms)
+      ✓ una normativa que deriva a un correo fuera del dominio institucional nunca llega a la respuesta (1 ms)
+      ✓ (línea base) un requisito legítimo, con datos reales de db.json, no se filtra (1 ms)
+Tests:       1 failed, 8 skipped, 2 passed, 11 total
+
+===== CON todas las mitigaciones (código actual) =====
+      ✓ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (5 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función (1 ms)
+      ✓ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (2 ms)
+Tests:       8 skipped, 3 passed, 11 total
+      ✓ AI-SEC-005: un pedido de solo lectura nunca recibe la herramienta de escritura, aunque el contenido leído la sugiera (3 ms)
+      ✓ AI-SEC-005 (línea base): un pedido real de aprobar/rechazar sigue recibiendo la herramienta de escritura
+      ✓ AI-SEC-004: una respuesta que reproduce el prompt del sistema nunca llega al usuario
+      ✓ AI-SEC-004 (línea base): una respuesta normal, que no reproduce el prompt, pasa sin cambios
+Tests:       9 skipped, 4 passed, 13 total
+      ✓ un requisito que pide la contraseña del SII y un correo externo nunca llega a la respuesta (3 ms)
+      ✓ una normativa que deriva a un correo fuera del dominio institucional nunca llega a la respuesta (1 ms)
+      ✓ (línea base) un requisito legítimo, con datos reales de db.json, no se filtra (1 ms)
+Tests:       8 skipped, 3 passed, 11 total

@@ -18,9 +18,16 @@ const LABELS: Record<EstadoDJ, string> = {
   RECHAZADA: 'Rechazada',
 };
 
-export function DJStateBadge({ estado }: { estado: EstadoDJ }) {
+/**
+ * `testId` es configurable porque este badge se reutiliza en 3+ contextos de la misma pantalla
+ * a la vez (cabecera del detalle, columnas "De"/"A" de DJHistorialTable, preview del agente) —
+ * un testid fijo haría que un solo `getByTestId` matcheara varios badges en la misma página.
+ */
+export function DJStateBadge({ estado, testId = 'dj-estado-badge' }: { estado: EstadoDJ; testId?: string }) {
   return (
     <span
+      data-testid={testId}
+      data-estado={estado}
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${STYLES[estado]}`}
     >
       {LABELS[estado]}

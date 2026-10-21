@@ -5,7 +5,7 @@ import type { AsistenteTramitesResult, CaminoRespuesta, NombreHerramienta } from
 import { construirCatalogo, encontrarPorKeyword } from './TramiteKeywordCatalog.js';
 import { TramiteToolsService } from './TramiteToolsService.js';
 import { DecidirHerramientaLlmService } from './DecidirHerramientaLlmService.js';
-import type { RetrieverSemanticoTramitesService } from './RetrieverSemanticoTramitesService.js';
+import { UMBRAL_CORROBORACION_LLM, type RetrieverSemanticoTramitesService } from './RetrieverSemanticoTramitesService.js';
 
 const RE_TIEMPO = /\b(tiempo|plazo|cu[aá]ndo|con cu[aá]nt[ao]|anticipaci[oó]n|d[ií]as antes)\b/i;
 const RE_NORMATIVA = /\b(normativa|resoluci[oó]n|reglamento|marco legal|respalda)\b/i;
@@ -22,6 +22,32 @@ const RE_NORMATIVA = /\b(normativa|resoluci[oó]n|reglamento|marco legal|respald
  */
 const RE_FUERA_DE_ALCANCE_TEMATICO =
   /\b(cu[aá]nto gana|sueldo|salario|remuneraci[oó]n|honorarios|ingreso mensual|opini[oó]n|opinas|te parece|mejor que)\b/i;
+
+/**
+ * v3 (evals offline M7) — categorías que NUNCA son un trámite y que el 3B del LLM-router sí
+ * llegaba a enrutar a un trámite cualquiera: manipulación del prompt, secretos/credenciales y
+ * consejo financiero (red teaming del Día 8 + dataset dorado). Ver evals/README.md.
+ */
+const RE_FUERA_DE_ALCANCE_SEGURIDAD =
+  /\b(ignora|olvida|omite)\b.*\b(instrucciones|reglas)\b|\bprompt\b|\b(claves?|contrase[ñn]as?|api[ -]?keys?|tokens?|secretos?)\b|\b(invertir|inversi[oó]n|inversiones|ahorros)\b/i;
+
+/**
+ * v3 — datos que db.json no registra para NINGÚN trámite (solo guarda requisitos, tiempo y
+ * normativa). Preguntar por costo con un trámite ya identificado es «sin respuesta»: hay que
+ * decirlo, no listar requisitos como si respondieran.
+ */
+const RE_DATO_NO_REGISTRADO = /\b(cu[aá]nto (cuesta|cobran|vale|se paga)|costo|precio|arancel|tarifa)\b/i;
+
+/**
+ * v3 — órdenes que el asistente nunca cumple (solo informa, jamás aprueba: RB de escalamiento).
+ * Se limita a formas imperativas («aprueba ahora/ya/mi…») para no confundirlas con preguntas
+ * como «¿quién aprueba la creación de grupos?».
+ */
+const RE_ORDEN_NO_SOPORTADA = /\b(aprueba|autoriza|firma)(me)?\s+(ahora|ya|mi|mis)\b|\bap(rué|rue)bame\b/i;
+
+function esFueraDeAlcance(pregunta: string): boolean {
+  return RE_FUERA_DE_ALCANCE_TEMATICO.test(pregunta) || RE_FUERA_DE_ALCANCE_SEGURIDAD.test(pregunta);
+}
 
 function detectarHerramienta(pregunta: string): NombreHerramienta {
   if (RE_TIEMPO.test(pregunta)) return 'CONSULTAR_TIEMPO';
@@ -59,16 +85,25 @@ export class AsistenteTramitesService {
   }
 
   async preguntar(pregunta: string): Promise<AsistenteTramitesResult> {
+    // v3: el guard va ANTES de RAG y de LLM-router. Antes solo cubría RAG y el LLM (3B) seguía
+    // enrutando montos y manipulaciones a un trámite cualquiera (evals EV-013, EV-018).
+    if (RE_ORDEN_NO_SOPORTADA.test(pregunta)) return this.respuestaOrdenNoSoportada();
+    if (esFueraDeAlcance(pregunta)) return this.respuestaFueraDeAlcance();
+
     const keywordMatch = encontrarPorKeyword(pregunta, this.catalogo);
     if (keywordMatch) {
+      const sinDato = this.respuestaSinDato(pregunta, keywordMatch.codigo, 'keyword');
+      if (sinDato) return sinDato;
       const ejecutado = this.ejecutar(detectarHerramienta(pregunta), keywordMatch.codigo);
       if (ejecutado) return this.respuestaConTramite(ejecutado, 'keyword');
     }
 
-    if (this.iaHabilitada && this.retrieverSemantico && !RE_FUERA_DE_ALCANCE_TEMATICO.test(pregunta)) {
+    if (this.iaHabilitada && this.retrieverSemantico) {
       // Nunca deja caer el chat entero por un Ollama caído — degrada al siguiente paso del router.
       const match = await this.retrieverSemantico.buscar(pregunta).catch(() => null);
       if (match) {
+        const sinDato = this.respuestaSinDato(pregunta, match.codigo, 'rag', match.similitud);
+        if (sinDato) return sinDato;
         const ejecutado = this.ejecutar(detectarHerramienta(pregunta), match.codigo);
         if (ejecutado) return this.respuestaConTramite(ejecutado, 'rag', match.similitud);
       }
@@ -76,13 +111,42 @@ export class AsistenteTramitesService {
 
     if (this.iaHabilitada && this.decisor) {
       const decision = await this.decisor.decidir(pregunta, this.tramites.listarTodos());
-      if (decision.tool !== 'NONE' && decision.codigo) {
+      // v3: el LLM (3B) propone, la similitud semántica corrobora. Sin evidencia semántica mínima
+      // no se confía en su elección (enrutaba «¿cómo saco mi pasaporte?» a un trámite cualquiera).
+      const corroborada =
+        decision.tool !== 'NONE' && decision.codigo && this.retrieverSemantico
+          ? (await this.retrieverSemantico.similitudCon(pregunta, decision.codigo).catch(() => 1)) >= UMBRAL_CORROBORACION_LLM
+          : true;
+      if (decision.tool !== 'NONE' && decision.codigo && corroborada) {
+        const sinDato = this.respuestaSinDato(pregunta, decision.codigo, 'llm');
+        if (sinDato) return sinDato;
         const ejecutado = this.ejecutar(decision.tool, decision.codigo);
         if (ejecutado) return this.respuestaConTramite(ejecutado, 'llm');
       }
     }
 
     return this.respuestaFueraDeAlcance();
+  }
+
+  /** «Sin respuesta»: el trámite existe pero el dato pedido (costo) no está en db.json. */
+  private respuestaSinDato(
+    pregunta: string,
+    codigo: string,
+    camino: CaminoRespuesta,
+    similitud?: number
+  ): AsistenteTramitesResult | undefined {
+    if (!RE_DATO_NO_REGISTRADO.test(pregunta)) return undefined;
+    const t = this.tramites.buscarPorCodigo(codigo);
+    if (!t) return undefined;
+    return {
+      respuesta: `No tengo información sobre el costo del trámite **${t.nombre}** en db.json. Puedo explicarte sus requisitos, su plazo o su normativa.`,
+      camino,
+      herramienta: null,
+      fuente: { codigo: t.codigo, nombre: t.nombre, departamento: t.departamento },
+      ...(similitud !== undefined ? { similitud } : {}),
+      iaHabilitada: this.iaHabilitada,
+      fuenteDatos: 'db.json',
+    };
   }
 
   private ejecutar(tool: NombreHerramienta, codigo: string): HerramientaEjecutada | undefined {
@@ -126,6 +190,19 @@ export class AsistenteTramitesService {
       herramienta: ejecutado.herramienta,
       fuente: ejecutado.fuente,
       ...(similitud !== undefined ? { similitud } : {}),
+      iaHabilitada: this.iaHabilitada,
+      fuenteDatos: 'db.json',
+    };
+  }
+
+  private respuestaOrdenNoSoportada(): AsistenteTramitesResult {
+    return {
+      respuesta:
+        'No puedo aprobar, autorizar ni registrar trámites: solo explico requisitos, plazos y normativa. Estos son los trámites que sí puedo explicarte:',
+      camino: null,
+      herramienta: null,
+      fuente: null,
+      tramitesDisponibles: this.tools.LISTAR_TRAMITES(),
       iaHabilitada: this.iaHabilitada,
       fuenteDatos: 'db.json',
     };

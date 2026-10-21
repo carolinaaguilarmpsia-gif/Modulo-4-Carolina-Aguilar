@@ -1,0 +1,57 @@
+(node:44288) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL backend/domain/orquestador-atencion/services/OrquestadorAtencionService.test.ts
+  OrquestadorAtencionService
+    ✓ un docente pregunta por sus propias DJ sin necesitar identificarse — usa actor.userId directo (11 ms)
+    ✓ un admin pregunta por un docente puntual — lo identifica por nombre y persiste el id para el próximo turno (4 ms)
+    ✓ nombre no encontrado — responde con las sugerencias reales, no un error genérico (3 ms)
+    ✓ admin sin mencionar ningún nombre — pide identificación en vez de buscar con el mensaje entero (1 ms)
+    ✓ reportar un problema escala a un humano y marca la conversación como ESCALADA (3 ms)
+    ✓ una conversación ya ESCALADA nunca vuelve a pasar por el clasificador — regla de negocio, no técnica (2 ms)
+    ✓ una intención no reconocida pide aclaración en vez de inventar una respuesta (1 ms)
+    ✓ cada turno se persiste — la conversación acumula historial real, no se pierde entre llamadas (1 ms)
+    regresión red team (redteam/hallazgos/AI-SEC-001.md)
+      ✕ AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre (3 ms)
+      ✓ AI-SEC-001 (línea base): el admin de la MISMA facultad sí ve el estado — la defensa no rompe la función (2 ms)
+      ✕ AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado (4 ms)
+
+  ● OrquestadorAtencionService › regresión red team (redteam/hallazgos/AI-SEC-001.md) › AI-SEC-001: un admin de OTRA facultad nombra a un docente — no ve sus DJ (RB-05), aunque el LLM extraiga el nombre
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "EN_REVISION_FACULTAD"
+    Received string:        "2026-I (LABORAL): EN_REVISION_FACULTAD"
+
+      343 |       });
+      344 |
+    > 345 |       expect(resultado.respuesta).not.toContain('EN_REVISION_FACULTAD');
+          |                                       ^
+      346 |       expect(resultado.respuesta).not.toContain('2026-I');
+      347 |     });
+      348 |
+
+      at Object.<anonymous> (backend/domain/orquestador-atencion/services/OrquestadorAtencionService.test.ts:345:39)
+
+  ● OrquestadorAtencionService › regresión red team (redteam/hallazgos/AI-SEC-001.md) › AI-SEC-002: otro usuario no puede continuar una conversación ajena ni heredar su docente identificado
+
+    expect(received).rejects.toMatchObject()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"conversacionId": "653cbe17-1e4e-4710-83d2-c84cb77d8dbb", "estadoFlujo": "ABIERTA", "intencion": "CONSULTA_ESTADO_DJ", "nodo": "consultar_dj", "respuesta": "2026-I (LABORAL): EN_REVISION_FACULTAD"}
+
+      370 |       const turnoVictima = await service.atender(ACTOR_ADMIN, { mensaje: '¿cómo va la DJ de Juan Jaldín?' });
+      371 |
+    > 372 |       await expect(
+          |             ^
+      373 |         service.atender(ACTOR_ADMIN_OTRA_FACULTAD, { conversacionId: turnoVictima.conversacionId, mensaje: '¿y ahora cómo está?' })
+      374 |       ).rejects.toMatchObject({ code: 'CONVERSACION_AJENA', httpStatus: 403 });
+      375 |     });
+
+      at expect (node_modules/expect/build/index.js:113:15)
+      at Object.<anonymous> (backend/domain/orquestador-atencion/services/OrquestadorAtencionService.test.ts:372:13)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 9 passed, 11 total
+Snapshots:   0 total
+Time:        4.443 s, estimated 8 s
+Ran all test suites matching /backend\/domain\/orquestador-atencion\/services\/OrquestadorAtencionService.test.ts/i.

@@ -63,7 +63,7 @@ export function DetalleDeclaracionJuradaPage() {
           <h2 className="mt-2 text-2xl font-bold text-slate-900">Declaración Jurada</h2>
           <p className="mt-1 font-mono text-xs text-slate-500">{dj.id}</p>
         </div>
-        <DJStateBadge estado={dj.estado} />
+        <DJStateBadge estado={dj.estado} testId="dj-estado-actual" />
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
