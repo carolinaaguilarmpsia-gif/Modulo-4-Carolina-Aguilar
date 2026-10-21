@@ -4,7 +4,7 @@ import { ForbiddenError, NotFoundError } from '../../shared/errors/DomainError.j
 import type { DeclaracionJurada } from '../entities/DeclaracionJurada.js';
 import type { INotificacionPublisher } from '../ports/out/INotificacionPublisher.js';
 import type { HistorialDJRecord, IDeclaracionJuradaRepository } from '../ports/out/IDeclaracionJuradaRepository.js';
-import type { ActorContext, CrearDJCommand, ListarDJQuery } from '../types/CrearDJ.js';
+import type { ActorContext, CrearDJCommand, EstadisticasDJ, ListarDJQuery } from '../types/CrearDJ.js';
 import { EstadoDJ } from '../types/EstadoDJ.js';
 import type { TransicionDJCommand, TransicionDJResult } from '../types/TransicionDJ.js';
 import { DJStateMachine } from './DJStateMachine.js';
@@ -62,6 +62,32 @@ export class DeclaracionJuradaService {
     }
 
     return this.repository.list(filters);
+  }
+
+  /**
+   * Conteo de DJ por estado, siempre con los 6 estados del enum (0 si no hay).
+   * Alcance por rol: DOCENTE solo las suyas, ADMIN_FACULTAD solo su facultad (RB-05).
+   * @see FSD-UC-002 · RB-05
+   */
+  async estadisticas(actor: ActorContext, facultadId?: string): Promise<EstadisticasDJ> {
+    if (actor.rol === Rol.ADMIN_FACULTAD && facultadId && facultadId !== actor.facultadId) {
+      throw new ForbiddenError('INSUFFICIENT_ROLE');
+    }
+
+    const filters: Parameters<IDeclaracionJuradaRepository['list']>[0] = { page: 1, pageSize: Number.MAX_SAFE_INTEGER };
+    if (actor.rol === Rol.DOCENTE) {
+      filters.docenteId = actor.userId;
+    } else if (actor.rol === Rol.ADMIN_FACULTAD) {
+      filters.facultadId = actor.facultadId;
+    } else if (facultadId) {
+      filters.facultadId = facultadId;
+    }
+
+    const { items } = await this.repository.list(filters);
+    const porEstado = Object.fromEntries(Object.values(EstadoDJ).map((e) => [e, 0])) as Record<EstadoDJ, number>;
+    for (const dj of items) porEstado[dj.estado] += 1;
+
+    return { porEstado, total: items.length };
   }
 
   async obtenerDetalle(djId: string, actor: ActorContext): Promise<{ dj: DeclaracionJurada; historial: HistorialDJRecord[] }> {

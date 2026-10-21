@@ -1,4 +1,5 @@
 import type { Rol } from '../../administracion/types/Rol.js';
+import type { EstadoDJ } from './EstadoDJ.js';
 
 export interface CrearDJCommand {
   docenteId: string;
@@ -19,4 +20,9 @@ export interface ListarDJQuery {
   estado?: string;
   page?: number;
   pageSize?: number;
+}
+
+export interface EstadisticasDJ {
+  porEstado: Record<EstadoDJ, number>;
+  total: number;
 }

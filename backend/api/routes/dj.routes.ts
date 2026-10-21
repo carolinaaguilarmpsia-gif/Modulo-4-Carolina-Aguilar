@@ -20,6 +20,7 @@ export function createDjRouter(controller: DjController, jwtSigner: IJwtSigner, 
   router.use(requireRole(jwtSigner, usuarios, TODOS_LOS_ROLES));
 
   router.get('/', asyncHandler(controller.list));
+  router.get('/estadisticas', asyncHandler(controller.estadisticas));
   router.post('/', validateBody(CreateDjSchema), asyncHandler(controller.create));
   router.get('/:id', asyncHandler(controller.getById));
   router.patch('/:id', validateBody(UpdateDjCamposSchema), asyncHandler(controller.updateCampos));

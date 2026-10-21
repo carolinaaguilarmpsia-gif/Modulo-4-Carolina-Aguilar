@@ -25,6 +25,16 @@ export class DjController {
     });
   };
 
+  estadisticas = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const facultadId = typeof req.query.facultadId === 'string' ? req.query.facultadId : undefined;
+    const result = await this.service.estadisticas(
+      { userId: req.user.userId, rol: req.user.rol, facultadId: req.user.facultadId },
+      facultadId
+    );
+
+    res.json({ ...result, correlationId: req.correlationId });
+  };
+
   create = async (
     req: AuthenticatedRequest & { validatedBody: z.infer<typeof CreateDjSchema> },
     res: Response
