@@ -21,6 +21,8 @@ export function createDjRouter(controller: DjController, jwtSigner: IJwtSigner, 
 
   router.get('/', asyncHandler(controller.list));
   router.post('/', validateBody(CreateDjSchema), asyncHandler(controller.create));
+  // Debe declararse ANTES de `/:id`, si no Express lo trataría como un id.
+  router.get('/estadisticas', asyncHandler(controller.estadisticas));
   router.get('/:id', asyncHandler(controller.getById));
   router.patch('/:id', validateBody(UpdateDjCamposSchema), asyncHandler(controller.updateCampos));
   router.patch('/:id/estado', validateBody(TransicionDjSchema), asyncHandler(controller.transicionarEstado));

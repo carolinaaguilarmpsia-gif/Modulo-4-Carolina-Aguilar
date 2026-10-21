@@ -25,6 +25,25 @@ export class DjController {
     });
   };
 
+  /**
+   * GET /estadisticas — conteo de DJ por estado según el rol del usuario autenticado.
+   * @see FSD-UC-002 · RB-05
+   */
+  estadisticas = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const facultadId = typeof req.query.facultadId === 'string' && req.query.facultadId ? req.query.facultadId : undefined;
+
+    const result = await this.service.estadisticas(
+      { userId: req.user.userId, rol: req.user.rol, facultadId: req.user.facultadId },
+      facultadId
+    );
+
+    res.json({
+      porEstado: result.porEstado,
+      total: result.total,
+      correlationId: req.correlationId,
+    });
+  };
+
   create = async (
     req: AuthenticatedRequest & { validatedBody: z.infer<typeof CreateDjSchema> },
     res: Response
