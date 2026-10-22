@@ -1,0 +1,148 @@
+{
+  "workflow_id": "2026-10-21T22:03:29Z",
+  "scope": "express",
+  "started_at": "2026-10-21T22:03:29Z",
+  "stages": [
+    {
+      "stage_slug": "workspace-scaffold",
+      "started_at": "2026-10-21T22:03:29Z",
+      "completed_at": "2026-10-21T22:03:29Z",
+      "agent": "orchestrator",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/initialization/workspace-scaffold/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "workspace-detection",
+      "started_at": "2026-10-21T22:03:29Z",
+      "completed_at": "2026-10-21T22:03:29Z",
+      "agent": "orchestrator",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/initialization/workspace-detection/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "state-init",
+      "started_at": "2026-10-21T22:03:29Z",
+      "completed_at": "2026-10-21T22:03:29Z",
+      "agent": "orchestrator",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/initialization/state-init/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "reverse-engineering",
+      "started_at": "2026-10-21T22:03:29Z",
+      "completed_at": "2026-10-21T22:09:35Z",
+      "agent": "aidlc-developer-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/inception/reverse-engineering/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "requirements-analysis",
+      "started_at": "2026-10-21T22:09:35Z",
+      "completed_at": "2026-10-21T22:13:47Z",
+      "agent": "aidlc-product-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/inception/requirements-analysis/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "code-generation",
+      "started_at": "2026-10-21T22:13:48Z",
+      "completed_at": "2026-10-21T22:21:33Z",
+      "agent": "aidlc-developer-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/construction/code-generation/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "build-and-test",
+      "started_at": "2026-10-21T22:21:33Z",
+      "completed_at": "2026-10-21T22:23:43Z",
+      "agent": "aidlc-quality-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/construction/build-and-test/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "approved",
+      "learnings_captured": {
+        "from_orchestrator": 0,
+        "from_user_addition": 0
+      }
+    },
+    {
+      "stage_slug": "deployment-pipeline",
+      "started_at": "2026-10-21T22:23:43Z",
+      "completed_at": null,
+      "agent": "aidlc-pipeline-deploy-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/operation/deployment-pipeline/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "pending",
+      "learnings_captured": null
+    },
+    {
+      "stage_slug": "deployment-execution",
+      "started_at": "2026-10-21T22:27:15Z",
+      "completed_at": null,
+      "agent": "aidlc-pipeline-deploy-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/operation/deployment-execution/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "pending",
+      "learnings_captured": null
+    },
+    {
+      "stage_slug": "observability-setup",
+      "started_at": "2026-10-21T22:27:31Z",
+      "completed_at": null,
+      "agent": "aidlc-operations-agent",
+      "memory_path": "aidlc/spaces/default/intents/261021-dj-estadisticas/operation/observability-setup/memory.md",
+      "memory_entries": null,
+      "memory_breakdown": null,
+      "sensor_firings": [],
+      "outcome": "pending",
+      "learnings_captured": null
+    }
+  ]
+}
