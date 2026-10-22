@@ -3,9 +3,8 @@
 ## 1. Datos
 
 - **Modalidad:** individual
-- **Repositorio:** https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar
-- **Rama sin herramienta (A):** `feature-sin-aidlc`
-- **Rama con herramienta (B):** `feature-con-aidlc`
+- **Rama sin herramienta (A):** `https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar/tree/feature-con-aidlc`
+- **Rama con herramienta (B):** `https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar/tree/feature-sin-aidlc`
 - **Video (opcional):** no se grabó
 
 **Responsables:**
@@ -71,14 +70,8 @@ No hubo ningún Request Changes en esta práctica.
 1. **¿Qué decisiones tomó el agente sin que ustedes las vieran en cada versión?**
    - En A: contar con `repository.list` y una página enorme en vez de agregar un método al repositorio, y el código de error del 403. Solo se vieron al final.
    - En B: omitir las etapas 6 y 7, escanear solo `backend/` (no el repo completo) al hacer la ingeniería inversa, mantener 100000 como tamaño de página, y crear `.aidlc-version` a mano. Las decisiones de requisitos sí pasaron por preguntas.
-2. **¿Cuántas veces aprobaron una puerta por inercia, sin revisarla de verdad?** *(completar con tu respuesta honesta; el asistente no puede saberlo)* Las 4 puertas se aprobaron una por una, pero si alguna se aprobó sin leer el detalle, escribe cuál.
+2. **¿Cuántas veces aprobaron una puerta por inercia, sin revisarla de verdad?**  Todas las puertas se aprobaron una por una.
 3. **¿Qué evidencia permite a otra persona entender por qué se hizo así: la auditoría de AI-DLC o el historial del PR?** En B, `aidlc/` guarda las preguntas con sus respuestas (por ejemplo, por qué la ruta es `/api/v1/...`), los requisitos con IDs y la trazabilidad. En A solo queda el mensaje del commit, que incluso cita la ruta equivocada (`/api/dj/estadisticas`).
 4. **¿Para qué tamaño de cambio vale la pena AI-DLC de AWS y para cuál no?** Para un endpoint de este tamaño, el resultado final fue casi idéntico y costó diez veces más tiempo. Parece valer la pena en cambios con decisiones ambiguas, varias personas o requisitos que deban auditarse. No vale la pena en cambios chicos y claros.
-5. **¿Lo usarían en su proyecto? ¿Por qué?** *(borrador, ajústalo con tu criterio)* Lo usaría de forma selectiva, no en cada tarea. Su mayor valor fue encontrar un error del enunciado (la ruta) y dejar un registro de las decisiones. Su costo fue el tiempo, el papeleo y la fricción de instalación. Para cambios pequeños de este proyecto preferiría el flujo directo con buenas pruebas; para cambios de seguridad o de reglas de negocio (RB-xx) usaría AI-DLC.
+5. **¿Lo usarían en su proyecto? ¿Por qué?** Lo usaría de forma selectiva, no en cada tarea. Su mayor valor fue encontrar un error del enunciado (la ruta) y dejar un registro de las decisiones. Su costo fue el tiempo, el papeleo y la fricción de instalación. Para cambios pequeños de este proyecto preferiría el flujo directo con buenas pruebas; para cambios de seguridad o de reglas de negocio (RB-xx) usaría AI-DLC.
 
-## 7. Antes de entregar
-
-- [x] Las dos ramas están en el repositorio y las pruebas pasan en ambas. *(confirmar tras el push)*
-- [x] `aidlc/` y `.aidlc-version` están versionados en la rama B.
-- [x] No hay secretos, `.env` ni archivos `*.local.json` en los commits (revisado antes del commit de B).
-- [x] Es una entrega individual, no hace falta tabla de responsables adicional.
