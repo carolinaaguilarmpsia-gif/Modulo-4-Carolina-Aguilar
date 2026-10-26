@@ -1,0 +1,74 @@
+
+=== 1. SIN índice de orden: página 1 (OFFSET 0) ===
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=12558.23..12560.56 rows=20 width=53) (actual time=119.778..126.569 rows=20 loops=1)
+   Buffers: shared hit=7072
+   ->  Gather Merge  (cost=12558.23..41726.93 rows=250000 width=53) (actual time=119.776..126.562 rows=20 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=7072
+         ->  Sort  (cost=11558.21..11870.71 rows=125000 width=53) (actual time=113.478..113.481 rows=17 loops=3)
+               Sort Key: updated_at DESC, id DESC
+               Sort Method: top-N heapsort  Memory: 29kB
+               Buffers: shared hit=7072
+               Worker 0:  Sort Method: top-N heapsort  Memory: 29kB
+               Worker 1:  Sort Method: top-N heapsort  Memory: 29kB
+               ->  Parallel Seq Scan on declaraciones_juradas  (cost=0.00..8232.00 rows=125000 width=53) (actual time=0.016..56.064 rows=100000 loops=3)
+                     Buffers: shared hit=6982
+ Planning:
+   Buffers: shared hit=85
+ Planning Time: 0.458 ms
+ Execution Time: 126.645 ms
+(18 rows)
+
+
+=== 2. SIN índice de orden: página profunda (OFFSET 100000) ===
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=35755.24..35757.57 rows=20 width=53) (actual time=306.944..314.673 rows=20 loops=1)
+   Buffers: shared hit=7072, temp read=1375 written=2538
+   ->  Gather Merge  (cost=24087.75..53256.46 rows=250000 width=53) (actual time=227.103..305.889 rows=100020 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=7072, temp read=1375 written=2538
+         ->  Sort  (cost=23087.73..23400.23 rows=125000 width=53) (actual time=206.237..221.621 rows=33728 loops=3)
+               Sort Key: updated_at DESC, id DESC
+               Sort Method: external merge  Disk: 7880kB
+               Buffers: shared hit=7072, temp read=1375 written=2538
+               Worker 0:  Sort Method: external merge  Disk: 6880kB
+               Worker 1:  Sort Method: external merge  Disk: 5464kB
+               ->  Parallel Seq Scan on declaraciones_juradas  (cost=0.00..8232.00 rows=125000 width=53) (actual time=0.022..57.808 rows=100000 loops=3)
+                     Buffers: shared hit=6982
+ Planning Time: 0.120 ms
+ Execution Time: 316.852 ms
+(16 rows)
+
+CREATE INDEX
+ANALYZE
+
+=== 3. CON índice (updated_at DESC, id DESC): página 1 ===
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..2.98 rows=20 width=53) (actual time=0.124..0.185 rows=20 loops=1)
+   Buffers: shared hit=20 read=3
+   ->  Index Scan using idx_dj_updated_id on declaraciones_juradas  (cost=0.42..38372.30 rows=300000 width=53) (actual time=0.122..0.178 rows=20 loops=1)
+         Buffers: shared hit=20 read=3
+ Planning:
+   Buffers: shared hit=27 read=1
+ Planning Time: 0.329 ms
+ Execution Time: 0.208 ms
+(8 rows)
+
+
+=== 4. CON índice: página profunda (OFFSET 100000) — el índice evita el Sort, pero OFFSET igual recorre 100.020 entradas ===
+                                                                           QUERY PLAN                                                                           
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=12791.05..12793.61 rows=20 width=53) (actual time=159.778..159.869 rows=20 loops=1)
+   Buffers: shared hit=100016 read=492
+   ->  Index Scan using idx_dj_updated_id on declaraciones_juradas  (cost=0.42..38372.30 rows=300000 width=53) (actual time=0.026..151.178 rows=100020 loops=1)
+         Buffers: shared hit=100016 read=492
+ Planning Time: 0.353 ms
+ Execution Time: 159.895 ms
+(6 rows)
+

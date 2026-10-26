@@ -52,7 +52,11 @@ Endpoints: `GET /api/v1/calendario-academico`, `PUT /api/v1/calendario-academico
   - Una prueba de Jest comprueba que toda ruta montada en Express está declarada en el contrato y que toda ruta declarada existe.
 - Más detalle: `docs/contrato-openapi.md`.
 
-## 4. Cómo se comprueba
+## 4. Paginación e índices con EXPLAIN (pregunta fija de la demo)
+
+El backend guarda hoy todo en memoria, así que no hay `EXPLAIN` sobre el producto. Se preparó un **prototipo en PostgreSQL 17** con la misma consulta del listado de declaraciones juradas, 300.000 filas, paginación por offset y por cursor, un índice que falta y dos que sobran: `prototipos/postgres-paginacion/` (ejecución: `bash prototipos/postgres-paginacion/run.sh`; explicación y guion en su `README.md`). No está conectado al backend.
+
+## 5. Cómo se comprueba
 
 ```bash
 npm run openapi:check

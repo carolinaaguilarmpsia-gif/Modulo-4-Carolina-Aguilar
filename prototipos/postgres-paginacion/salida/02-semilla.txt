@@ -1,0 +1,7 @@
+INSERT 0 300000
+ANALYZE
+ filas  | facultades 
+--------+------------
+ 300000 |         15
+(1 row)
+

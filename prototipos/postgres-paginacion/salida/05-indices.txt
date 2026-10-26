@@ -1,0 +1,97 @@
+
+=== 7. FALTA UN ÍNDICE: el total de una facultad y un estado (hoy solo existe el de orden) ===
+                                                                     QUERY PLAN                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize Aggregate  (cost=9861.70..9861.71 rows=1 width=8) (actual time=54.494..67.986 rows=1 loops=1)
+   Buffers: shared hit=6982
+   ->  Gather  (cost=9861.49..9861.70 rows=2 width=8) (actual time=51.451..67.971 rows=3 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=6982
+         ->  Partial Aggregate  (cost=8861.49..8861.50 rows=1 width=8) (actual time=45.217..45.219 rows=1 loops=3)
+               Buffers: shared hit=6982
+               ->  Parallel Seq Scan on declaraciones_juradas  (cost=0.00..8857.00 rows=1795 width=0) (actual time=0.041..44.891 rows=1416 loops=3)
+                     Filter: ((facultad_id = 'facultad-3'::text) AND (estado = 'EN_REVISION_FACULTAD'::text))
+                     Rows Removed by Filter: 98584
+                     Buffers: shared hit=6982
+ Planning:
+   Buffers: shared hit=92
+ Planning Time: 0.559 ms
+ Execution Time: 68.116 ms
+(16 rows)
+
+
+=== 8. FALTA UN ÍNDICE: declaraciones de un docente (DOCENTE ve solo las suyas) ===
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..3952.13 rows=20 width=46) (actual time=10.571..52.270 rows=20 loops=1)
+   Buffers: shared hit=38154
+   ->  Index Scan using idx_dj_updated_id on declaraciones_juradas  (cost=0.42..39122.30 rows=198 width=46) (actual time=10.568..52.250 rows=20 loops=1)
+         Filter: (docente_id = 'docente-77'::text)
+         Rows Removed by Filter: 37946
+         Buffers: shared hit=38154
+ Planning:
+   Buffers: shared hit=35
+ Planning Time: 0.560 ms
+ Execution Time: 52.319 ms
+(10 rows)
+
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+
+=== 9. CON índice: el mismo total por facultad y estado ===
+                                                                     QUERY PLAN                                                                      
+-----------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=6752.67..6752.68 rows=1 width=8) (actual time=10.669..10.671 rows=1 loops=1)
+   Buffers: shared hit=3187 read=42
+   ->  Bitmap Heap Scan on declaraciones_juradas  (cost=206.20..6741.51 rows=4466 width=0) (actual time=4.634..10.095 rows=4248 loops=1)
+         Recheck Cond: ((facultad_id = 'facultad-3'::text) AND (estado = 'EN_REVISION_FACULTAD'::text))
+         Heap Blocks: exact=3187
+         Buffers: shared hit=3187 read=42
+         ->  Bitmap Index Scan on idx_dj_facultad_estado_updated  (cost=0.00..205.08 rows=4466 width=0) (actual time=3.978..3.979 rows=4248 loops=1)
+               Index Cond: ((facultad_id = 'facultad-3'::text) AND (estado = 'EN_REVISION_FACULTAD'::text))
+               Buffers: shared read=42
+ Planning:
+   Buffers: shared hit=8 read=2
+ Planning Time: 0.481 ms
+ Execution Time: 10.724 ms
+(13 rows)
+
+
+=== 10. CON índice: declaraciones de un docente ===
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=0.42..80.77 rows=20 width=46) (actual time=0.243..0.294 rows=20 loops=1)
+   Buffers: shared hit=20 read=3
+   ->  Index Scan using idx_dj_docente_updated on declaraciones_juradas  (cost=0.42..791.87 rows=197 width=46) (actual time=0.242..0.287 rows=20 loops=1)
+         Index Cond: (docente_id = 'docente-77'::text)
+         Buffers: shared hit=20 read=3
+ Planning:
+   Buffers: shared hit=14
+ Planning Time: 0.277 ms
+ Execution Time: 0.326 ms
+(9 rows)
+
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+ pg_sleep 
+----------
+ 
+(1 row)
+
+
+=== 11. ÍNDICES QUE SOBRAN: los que nunca se usan (idx_scan = 0) cuestan en cada INSERT y UPDATE ===
+         tabla         |             indice             | usos | tamano  
+-----------------------+--------------------------------+------+---------
+ declaraciones_juradas | declaraciones_juradas_pkey     |    0 | 11 MB
+ declaraciones_juradas | idx_dj_estado                  |    0 | 2096 kB
+ declaraciones_juradas | idx_dj_facultad                |    0 | 2096 kB
+ declaraciones_juradas | idx_dj_docente_updated         |    2 | 17 MB
+ declaraciones_juradas | idx_dj_facultad_estado_updated |    2 | 21 MB
+ declaraciones_juradas | idx_dj_updated_id              |    7 | 12 MB
+(6 rows)
+
+DROP INDEX
+DROP INDEX
