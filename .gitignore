@@ -37,3 +37,6 @@ backend/data/conversaciones.json
 playwright-report/
 test-results/
 blob-report/
+
+# Caché de Schemathesis
+.schemathesis/

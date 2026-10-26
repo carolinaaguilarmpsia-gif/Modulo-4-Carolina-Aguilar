@@ -116,6 +116,17 @@ export function globalErrorHandler(err: Error, req: Request, res: Response, _nex
     return;
   }
 
+  // Errores del parser de JSON (express.json): son del cliente, nunca un 500.
+  const parseo = err as Error & { type?: string };
+  if (parseo.type === 'entity.parse.failed') {
+    res.status(400).json({ error: 'INVALID_JSON', message: 'El cuerpo de la petición no es un JSON válido.', correlationId });
+    return;
+  }
+  if (parseo.type === 'entity.too.large') {
+    res.status(413).json({ error: 'PAYLOAD_TOO_LARGE', message: 'El cuerpo de la petición es demasiado grande.', correlationId });
+    return;
+  }
+
   console.error('Unhandled error', { correlationId, type: err.constructor.name, message: err.message });
   res.status(500).json({ error: 'INTERNAL_ERROR', correlationId });
 }

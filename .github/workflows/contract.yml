@@ -1,0 +1,123 @@
+name: Contrato OpenAPI
+
+# Cuatro comprobaciones sobre openapi.json, cada una con su pregunta (S05 · parte B):
+#   1 Drift        ¿el archivo versionado es el que genera el código?
+#   2 Lint         ¿el contrato sigue las reglas? (Spectral)
+#   3 Breaking     ¿este PR rompe a los clientes frente a la rama base? (oasdiff)
+#   4 Conformidad  ¿la API real responde lo que declara el contrato? (Schemathesis)
+# Ninguna reemplaza a otra: un PR en rojo no se arregla relajando la regla, se decide.
+on:
+  pull_request:
+  push:
+    branches: [main, 'release/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift-y-lint:
+    name: 1 Drift y 2 Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - run: npm ci
+      - run: npm ci --prefix backend
+
+      - name: 1 Drift — exportar y comparar con lo versionado
+        run: |
+          npm run openapi:export
+          git diff --exit-code -- openapi.json
+
+      - name: 2 Lint — Spectral
+        run: npm run openapi:lint
+
+      - name: Toda ruta montada en Express está en el contrato, y viceversa
+        run: NODE_OPTIONS=--experimental-vm-modules npx jest --watchman=false backend/api/openapi.contract
+
+  breaking:
+    name: 3 Cambios incompatibles (oasdiff)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Traer la rama base
+        run: git fetch --depth=1 origin ${{ github.base_ref }}
+
+      - name: oasdiff breaking contra la rama base
+        uses: oasdiff/oasdiff-action/breaking@v0.1.18
+        with:
+          base: origin/${{ github.base_ref }}:openapi.json
+          revision: openapi.json
+          fail-on: ERR
+          # Sin esto la acción sube la comparación cifrada a oasdiff.com
+          review: "false"
+
+  conformidad:
+    name: 4 Conformidad (Schemathesis)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci --prefix backend
+
+      - name: API en segundo plano
+        working-directory: backend
+        env:
+          PORT: "3001"
+          # Variables de CI: la clave solo vive en este job; no es una credencial real.
+          JWT_SECRET: clave-solo-para-ci
+          IA_HABILITADA: "false"
+          AUTH_RATE_LIMIT_MAX: "100000"
+        run: nohup node --import tsx api/server.ts > ../api.log 2>&1 &
+
+      - name: Esperar al puerto (60 x 0,5 s)
+        run: |
+          for i in $(seq 1 120); do
+            curl -sf http://localhost:3001/health && exit 0
+            sleep 0.5
+          done
+          echo "La API no arrancó:"; cat api.log; exit 1
+
+      - name: Token de un usuario semilla
+        run: |
+          TOKEN=$(curl -sf -X POST http://localhost:3001/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin.sistema@universidad.edu.bo","password":"Demo1234!"}' | jq -r .token)
+          echo "::add-mask::$TOKEN"
+          echo "TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: 4 Schemathesis — la API contra su contrato
+        # unsupported_method: Express responde 404 y no 405 a métodos no declarados.
+        # positive_data_acceptance: hay reglas de negocio (rol, facultad) que rechazan datos válidos por el esquema.
+        run: |
+          pip install schemathesis==4.31.1
+          schemathesis run openapi.json \
+            --url http://localhost:3001/api/v1 \
+            --checks all \
+            --exclude-checks unsupported_method,positive_data_acceptance \
+            --exclude-path /health \
+            --max-examples 15 \
+            -H "Authorization: Bearer $TOKEN"
+
+      - name: Si falla, el log de la API
+        if: failure()
+        run: cat api.log

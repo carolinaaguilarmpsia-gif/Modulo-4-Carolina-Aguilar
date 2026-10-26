@@ -5,8 +5,8 @@ import type { IUsuarioRepository } from '../../domain/administracion/ports/out/I
 import { Rol } from '../../domain/administracion/types/Rol.js';
 import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireRole } from '../middleware/auth.middleware.js';
-import { validateBody } from '../validators/dj.validator.js';
-import { ConsultarCalendarioQuerySchema, PublicarCalendarioSchema, validateQuery } from '../validators/calendario.validator.js';
+import { validateBody, validateQuery } from '../validators/dj.validator.js';
+import { ConsultarCalendarioQuerySchema, PublicarCalendarioSchema } from '../validators/calendario.validator.js';
 
 /** @see FSD-UC-008 — montado en /api/v1/calendario-academico */
 export function createCalendarioRouter(

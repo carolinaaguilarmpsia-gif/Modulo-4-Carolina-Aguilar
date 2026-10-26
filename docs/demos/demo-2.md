@@ -44,11 +44,13 @@ Endpoints: `GET /api/v1/calendario-academico`, `PUT /api/v1/calendario-academico
 
 - **Generado desde el código:** `backend/api/openapi/document.ts` construye el contrato a partir de los mismos esquemas Zod que valida la API y de los tipos del dominio. No se edita a mano.
 - **Exportación:** `npm run openapi:export` escribe `openapi.json` en la raíz del repositorio. Incluye los 20 endpoints del producto, con el caso de uso del FSD en `x-fsd-uc`.
-- **Flujo de CI:** `.github/workflows/openapi.yml`, en cada pull request:
-  - `npm run openapi:check` falla si `openapi.json` difiere de lo que genera el código (drift);
-  - `npm run openapi:lint` ejecuta Spectral con `.spectral.yaml` (reglas `spectral:oas` más una regla propia de trazabilidad con el FSD);
-  - una prueba de Jest comprueba que toda ruta montada en Express está declarada y que toda ruta declarada existe;
-  - oasdiff (opcional) informa de cambios incompatibles frente a la rama base.
+- **Flujo de CI:** `.github/workflows/contract.yml`, con las cuatro comprobaciones de la S05 en cada pull request:
+  1. **Drift:** exporta `openapi.json` y falla si `git diff --exit-code` muestra diferencias.
+  2. **Lint:** Spectral con `.spectral.yaml` (`spectral:oas` más una regla propia de trazabilidad con el FSD), con `--fail-severity=warn`.
+  3. **Cambios incompatibles:** oasdiff contra la rama base, solo en pull request.
+  4. **Conformidad:** Schemathesis contra la API levantada. Su primera corrida encontró errores reales (JSON inválido devolvía 500, `page=0` se aceptaba); se corrigieron y quedó con 1250 casos correctos.
+  - Una prueba de Jest comprueba que toda ruta montada en Express está declarada en el contrato y que toda ruta declarada existe.
+- Más detalle: `docs/contrato-openapi.md`.
 
 ## 4. Cómo se comprueba
 

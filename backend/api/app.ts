@@ -33,7 +33,7 @@ import { AgenteDjController } from './controllers/agenteDj.controller.js';
 import { OrquestadorController } from './controllers/orquestador.controller.js';
 import { AuthController } from './controllers/auth.controller.js';
 import { DjController } from './controllers/dj.controller.js';
-import { globalErrorHandler } from './middleware/auth.middleware.js';
+import { correlationIdMiddleware, globalErrorHandler, type AuthenticatedRequest } from './middleware/auth.middleware.js';
 import { createAsistenteRouter } from './routes/asistente.routes.js';
 import { createAsistenteTramitesRouter } from './routes/asistenteTramites.routes.js';
 import { createAgenteDjRouter } from './routes/agenteDj.routes.js';
@@ -148,6 +148,7 @@ app.use(
     origin: leerCorsOrigins(),
   })
 );
+app.use(correlationIdMiddleware);
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -174,5 +175,14 @@ const calendarioController = new CalendarioController(
 app.use('/api/v1/admin/docentes', createAdminDocentesRouter(adminDocentesController, jwtSigner, usuarioRepository));
 app.use('/api/v1/perfil-docente', createPerfilDocenteRouter(perfilDocenteController, jwtSigner, usuarioRepository));
 app.use('/api/v1/calendario-academico', createCalendarioRouter(calendarioController, jwtSigner, usuarioRepository));
+
+// Ruta inexistente: JSON con correlationId, no la página HTML por defecto de Express.
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'NOT_FOUND',
+    message: 'La ruta solicitada no existe.',
+    correlationId: (req as unknown as AuthenticatedRequest).correlationId,
+  });
+});
 
 app.use(globalErrorHandler);

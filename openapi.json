@@ -449,6 +449,16 @@
               }
             }
           },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Falta el token, es inválido o expiró.",
             "content": {
@@ -509,7 +519,15 @@
         "parameters": [
           {
             "schema": {
-              "$ref": "#/components/schemas/EstadoDJ"
+              "type": "string",
+              "enum": [
+                "BORRADOR",
+                "EN_REVISION_FACULTAD",
+                "APROBADA",
+                "DEVUELTA",
+                "EN_REVISION_DPA",
+                "RECHAZADA"
+              ]
             },
             "required": false,
             "name": "estado",
@@ -574,6 +592,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       },
@@ -613,7 +641,8 @@
                     "type": "object",
                     "additionalProperties": {
                       "nullable": true
-                    }
+                    },
+                    "minProperties": 1
                   }
                 },
                 "required": [
@@ -648,6 +677,16 @@
                     "estado",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -884,6 +923,16 @@
               }
             }
           },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Falta el token, es inválido o expiró.",
             "content": {
@@ -1020,6 +1069,16 @@
               }
             }
           },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Falta el token, es inválido o expiró.",
             "content": {
@@ -1152,6 +1211,16 @@
                     "rolNuevo",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -1467,6 +1536,16 @@
               }
             }
           },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Falta el token, es inválido o expiró.",
             "content": {
@@ -1698,6 +1777,16 @@
               }
             }
           },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Falta el token, es inválido o expiró.",
             "content": {
@@ -1880,11 +1969,11 @@
                         },
                         "fechaInicio": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "format": "date"
                         },
                         "fechaFin": {
                           "type": "string",
-                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          "format": "date"
                         }
                       },
                       "required": [
@@ -1953,6 +2042,16 @@
                     "calendario",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2065,6 +2164,16 @@
                     "respuestaModelo",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2193,10 +2302,16 @@
                       "type": "string"
                     },
                     "camino": {
-                      "type": "string"
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "herramienta": {
+                      "type": "string",
+                      "nullable": true
                     },
                     "fuente": {
                       "type": "object",
+                      "nullable": true,
                       "additionalProperties": {
                         "nullable": true
                       }
@@ -2209,6 +2324,16 @@
                     "respuesta",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2296,6 +2421,16 @@
                     "traza",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2406,6 +2541,16 @@
                     "traza",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
@@ -2535,6 +2680,16 @@
                     "estadoFlujo",
                     "correlationId"
                   ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El cuerpo de la petición no es un JSON válido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }

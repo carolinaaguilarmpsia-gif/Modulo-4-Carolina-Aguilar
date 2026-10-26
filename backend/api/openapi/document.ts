@@ -11,7 +11,7 @@ import { EstadoDJ } from '../../domain/declaracion-jurada/types/EstadoDJ.js';
 import { RolInstitucional } from '../../domain/gestion-docente/types/RolInstitucional.js';
 import { AgenteDjSchemas } from './agenteSchemas.js';
 import { LoginSchema } from '../validators/auth.validator.js';
-import { CreateDjSchema, TransicionDjSchema, UpdateDjCamposSchema } from '../validators/dj.validator.js';
+import { CreateDjSchema, ListDjQuerySchema, TransicionDjSchema, UpdateDjCamposSchema } from '../validators/dj.validator.js';
 import { ValidarDJSchema } from '../validators/asistente.validator.js';
 import { AsistenteTramitesSchema } from '../validators/asistenteTramites.validator.js';
 import { AtenderOrquestadorSchema } from '../validators/orquestador.validator.js';
@@ -111,8 +111,9 @@ const EventoCalendarioConsulta = registry.register(
 );
 
 // ── Helpers ──────────────────────────────────────────────────────────────────────────────────
-type CodigoError = 401 | 403 | 404 | 422 | 429;
+type CodigoError = 400 | 401 | 403 | 404 | 422 | 429;
 const DESCRIPCION_ERROR: Record<CodigoError, string> = {
+  400: 'El cuerpo de la petición no es un JSON válido.',
   401: 'Falta el token, es inválido o expiró.',
   403: 'El rol o los datos no permiten la operación.',
   404: 'El recurso no existe.',
@@ -142,7 +143,10 @@ function declarar(o: Operacion): void {
   const seguridad = o.seguridad ?? 'bearer';
   const errores = new Set<CodigoError>(o.errores ?? []);
   if (seguridad === 'bearer') errores.add(401);
-  if (o.body) errores.add(422);
+  if (o.body) {
+    errores.add(400);
+    errores.add(422);
+  }
 
   const responses: RouteConfig['responses'] = {
     [o.ok.status]: { description: o.ok.descripcion, content: { 'application/json': { schema: o.ok.schema } } },
@@ -210,13 +214,13 @@ declarar({
   tag: 'Declaraciones juradas',
   summary: 'Listar las declaraciones juradas visibles para el actor',
   uc: 'FSD-UC-002',
-  query: z.object({ estado: EstadoDJSchema.optional(), page: z.coerce.number().int().min(1).optional() }),
+  query: ListDjQuerySchema,
   ok: {
     status: 200,
     descripcion: 'Lista paginada.',
     schema: z.object({ items: z.array(DJResumen), total: z.number().int(), correlationId }),
   },
-  errores: [403],
+  errores: [403, 422],
 });
 declarar({
   operationId: 'crearDeclaracionJurada',
@@ -226,7 +230,7 @@ declarar({
   summary: 'Crear una declaración jurada en BORRADOR',
   description: 'Solo docentes con vinculación activa (RB-01).',
   uc: 'FSD-UC-002',
-  body: CreateDjSchema,
+  body: CreateDjSchema.extend({ camposFormulario: z.record(z.unknown()).openapi({ minProperties: 1 }) }),
   ok: {
     status: 201,
     descripcion: 'Declaración jurada creada.',
@@ -456,7 +460,15 @@ declarar({
   ok: {
     status: 200,
     descripcion: 'Respuesta con su camino y su fuente.',
-    schema: z.object({ respuesta: z.string(), camino: z.string().optional(), fuente: libre.optional(), correlationId }).passthrough(),
+    schema: z
+      .object({
+        respuesta: z.string(),
+        camino: z.string().nullable().optional(),
+        herramienta: z.string().nullable().optional(),
+        fuente: libre.nullable().optional(),
+        correlationId,
+      })
+      .passthrough(),
   },
 });
 declarar({

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EstadoDJ } from '../../domain/declaracion-jurada/types/EstadoDJ.js';
 import type { NextFunction, Request, Response } from 'express';
 
 export const CreateDjSchema = z.object({
@@ -36,6 +37,24 @@ export function validateBody<T>(schema: z.ZodSchema<T>) {
 }
 
 export const ListDjQuerySchema = z.object({
-  estado: z.string().optional(),
+  estado: z.nativeEnum(EstadoDJ).optional(),
   page: z.coerce.number().int().min(1).optional(),
 });
+
+/** Igual que `validateBody` pero sobre `req.query`; mismo formato 422 con `correlationId`. */
+export function validateQuery<T>(schema: z.ZodSchema<T>) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      res.status(422).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Datos inválidos',
+        details: result.error.flatten().fieldErrors,
+        correlationId: (req as { correlationId?: string }).correlationId,
+      });
+      return;
+    }
+    (req as Request & { validatedQuery: T }).validatedQuery = result.data;
+    next();
+  };
+}
