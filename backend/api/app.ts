@@ -42,6 +42,18 @@ import { createAuthRouter } from './routes/auth.routes.js';
 import { createDjRouter } from './routes/dj.routes.js';
 import { resolverJwtSecret } from '../infrastructure/config/jwtSecret.js';
 import { leerCorsOrigins } from '../infrastructure/config/corsOrigins.js';
+import { AsignarRolInstitucionalService } from '../domain/gestion-docente/services/AsignarRolInstitucionalService.js';
+import { GestionarPerfilDocenteService } from '../domain/gestion-docente/services/GestionarPerfilDocenteService.js';
+import { GestionarCalendarioService } from '../domain/gestion-academica/services/GestionarCalendarioService.js';
+import { InMemoryRolInstitucionalRepository } from '../infrastructure/persistence/InMemoryRolInstitucionalRepository.js';
+import { InMemoryPerfilDocenteRepository } from '../infrastructure/persistence/InMemoryPerfilDocenteRepository.js';
+import { InMemoryCalendarioRepository } from '../infrastructure/persistence/InMemoryCalendarioRepository.js';
+import { AdminDocentesController } from './controllers/adminDocentes.controller.js';
+import { PerfilDocenteController } from './controllers/perfilDocente.controller.js';
+import { CalendarioController } from './controllers/calendario.controller.js';
+import { createAdminDocentesRouter } from './routes/adminDocentes.routes.js';
+import { createPerfilDocenteRouter } from './routes/perfilDocente.routes.js';
+import { createCalendarioRouter } from './routes/calendario.routes.js';
 
 // Ruta absoluta relativa a este archivo (backend/api/app.ts), no a process.cwd() —
 // el server se invoca a veces desde la raíz del repo, a veces desde backend/, y
@@ -148,5 +160,19 @@ app.use('/api/v1/asistente', createAsistenteRouter(asistenteController));
 app.use('/api/v1/asistente-tramites', createAsistenteTramitesRouter(asistenteTramitesController));
 app.use('/api/v1/agente-dj', createAgenteDjRouter(agenteDjController, jwtSigner, usuarioRepository));
 app.use('/api/v1/orquestador', createOrquestadorRouter(orquestadorController, jwtSigner, usuarioRepository));
+
+// FSD-UC-009 / UC-006 / UC-008 — gestión docente y calendario (in-memory, como el resto de repos).
+const adminDocentesController = new AdminDocentesController(
+  new AsignarRolInstitucionalService(usuarioRepository, new InMemoryRolInstitucionalRepository())
+);
+const perfilDocenteController = new PerfilDocenteController(
+  new GestionarPerfilDocenteService(new InMemoryPerfilDocenteRepository())
+);
+const calendarioController = new CalendarioController(
+  new GestionarCalendarioService(new InMemoryCalendarioRepository())
+);
+app.use('/api/v1/admin/docentes', createAdminDocentesRouter(adminDocentesController, jwtSigner, usuarioRepository));
+app.use('/api/v1/perfil-docente', createPerfilDocenteRouter(perfilDocenteController, jwtSigner, usuarioRepository));
+app.use('/api/v1/calendario-academico', createCalendarioRouter(calendarioController, jwtSigner, usuarioRepository));
 
 app.use(globalErrorHandler);

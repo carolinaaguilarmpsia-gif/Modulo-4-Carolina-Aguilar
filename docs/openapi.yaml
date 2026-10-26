@@ -1,0 +1,768 @@
+openapi: 3.0.3
+info:
+  title: SGAI API — Sistema de Gestión Académica Integral
+  version: 8.0.0
+  description: |
+    Contrato OpenAPI del backend de SGAI (Express + TypeScript). Es la fuente de verdad de los
+    endpoints del producto: todo endpoint montado en `backend/api/app.ts` debe estar declarado
+    aquí (lo verifica `backend/api/openapi.contract.test.ts`).
+
+    - Prefijo: `/api/v1` (salvo `/health`).
+    - Autenticación: `Authorization: Bearer <JWT>` obtenido en `POST /auth/login`.
+    - Todas las respuestas, de éxito o de error, incluyen `correlationId`.
+    - Errores estándar: 401 autenticación, 403 dominio (RB-04, RB-05…), 422 validación, 429 bloqueo (RB-07).
+    - Trazabilidad: cada operación indica el caso de uso del FSD que implementa (`x-fsd-uc`).
+servers:
+  - url: /api/v1
+tags:
+  - name: Autenticación
+  - name: Declaraciones juradas
+  - name: Gestión docente
+  - name: Calendario académico
+  - name: Asistentes de IA
+  - name: Sistema
+
+paths:
+  /health:
+    servers:
+      - url: /
+    get:
+      tags: [Sistema]
+      summary: Estado del servicio
+      security: []
+      responses:
+        '200':
+          description: El servicio responde.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, module]
+                properties:
+                  status: { type: string, example: ok }
+                  module: { type: string, example: sgai-api }
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión
+      x-fsd-uc: FSD-UC-001
+      description: Valida credenciales (LDAP con respaldo local). 5 intentos fallidos bloquean la cuenta 15 minutos (RB-07).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Sesión iniciada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token, rol, nombreCompleto, facultadId, correlationId]
+                properties:
+                  token: { type: string }
+                  rol: { $ref: '#/components/schemas/Rol' }
+                  nombreCompleto: { type: string }
+                  facultadId: { type: string }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /declaraciones-juradas:
+    get:
+      tags: [Declaraciones juradas]
+      summary: Listar declaraciones juradas visibles para el actor
+      x-fsd-uc: FSD-UC-002
+      parameters:
+        - { name: estado, in: query, schema: { $ref: '#/components/schemas/EstadoDJ' } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Lista paginada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total, correlationId]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/DJResumen' }
+                  total: { type: integer }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Declaraciones juradas]
+      summary: Crear una declaración jurada en BORRADOR
+      x-fsd-uc: FSD-UC-002
+      description: Solo docentes con vinculación activa (RB-01).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tipo, periodoAcademico, camposFormulario]
+              properties:
+                tipo: { type: string, enum: [LABORAL, PATRIMONIAL, INTERESES] }
+                periodoAcademico: { $ref: '#/components/schemas/Periodo' }
+                camposFormulario: { type: object, additionalProperties: true, minProperties: 1 }
+      responses:
+        '201':
+          description: DJ creada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, estado, correlationId]
+                properties:
+                  id: { type: string }
+                  estado: { $ref: '#/components/schemas/EstadoDJ' }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /declaraciones-juradas/estadisticas:
+    get:
+      tags: [Declaraciones juradas]
+      summary: Conteo de declaraciones juradas por estado
+      x-fsd-uc: FSD-UC-002
+      description: DOCENTE ve solo las suyas; ADMIN_FACULTAD solo su facultad (RB-05); TECNICO_DPA y ADMIN_SISTEMA ven todas y pueden filtrar.
+      parameters:
+        - { name: facultadId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Conteo por estado, con 0 donde no hay DJ.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [porEstado, total, correlationId]
+                properties:
+                  porEstado:
+                    type: object
+                    additionalProperties: { type: integer }
+                  total: { type: integer }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /declaraciones-juradas/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [Declaraciones juradas]
+      summary: Detalle de una DJ con su historial
+      x-fsd-uc: FSD-UC-002
+      responses:
+        '200':
+          description: Detalle e historial de estados.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DJDetalle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Declaraciones juradas]
+      summary: Editar los campos de una DJ (solo BORRADOR o DEVUELTA)
+      x-fsd-uc: FSD-UC-002
+      description: Una DJ aprobada o en revisión no es editable (RB-03).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [camposFormulario]
+              properties:
+                camposFormulario: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: DJ actualizada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DJDetalle' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /declaraciones-juradas/{id}/estado:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Declaraciones juradas]
+      summary: Transicionar el estado de una DJ
+      x-fsd-uc: FSD-UC-002
+      description: Máquina de estados de la DJ. Cambio de estado e historial en una sola transacción (RB-06).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comando]
+              properties:
+                comando: { type: string, enum: [ENVIAR, APROBAR, DEVOLVER, ESCALAR_DPA, REENVIAR, RECHAZAR] }
+                observaciones: { type: string, minLength: 10, maxLength: 1000 }
+      responses:
+        '200':
+          description: Transición aplicada.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, estadoAnterior, estadoNuevo, historialId, correlationId]
+                properties:
+                  id: { type: string }
+                  estadoAnterior: { $ref: '#/components/schemas/EstadoDJ' }
+                  estadoNuevo: { $ref: '#/components/schemas/EstadoDJ' }
+                  historialId: { type: string }
+                  notificacionEncolada: { type: boolean }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /admin/docentes/{id}/rol-institucional:
+    parameters:
+      - { name: id, in: path, required: true, description: Identificador del docente., schema: { type: string } }
+    patch:
+      tags: [Gestión docente]
+      summary: Asignar o revocar el rol institucional de un docente
+      x-fsd-uc: FSD-UC-009
+      description: |
+        ADMIN_FACULTAD solo puede gestionar docentes de su facultad (RB-05, 403 `CROSS_FACULTY_FORBIDDEN`).
+        ADMIN_SISTEMA puede gestionar a cualquier docente. El cambio y su registro de auditoría
+        (actor y fecha) se guardan de forma atómica (RB-06). `null` revoca el rol.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rolInstitucional]
+              properties:
+                rolInstitucional:
+                  type: string
+                  nullable: true
+                  enum: [AUTORIDAD, INVESTIGADOR, ADMINISTRATIVO]
+      responses:
+        '200':
+          description: Rol actualizado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [docenteId, rolAnterior, rolNuevo, correlationId]
+                properties:
+                  docenteId: { type: string }
+                  rolAnterior: { type: string, nullable: true, enum: [AUTORIDAD, INVESTIGADOR, ADMINISTRATIVO] }
+                  rolNuevo: { type: string, nullable: true, enum: [AUTORIDAD, INVESTIGADOR, ADMINISTRATIVO] }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /perfil-docente:
+    get:
+      tags: [Gestión docente]
+      summary: Consultar el perfil y CV docente
+      x-fsd-uc: FSD-UC-006
+      description: |
+        DOCENTE consulta el suyo. ADMIN_SISTEMA consulta el de un docente indicado con `docenteId`
+        (solo lectura). Un docente que pide el de otro recibe 403 `UNAUTHORIZED_DATA_ACCESS`.
+        Si el perfil aún no existe, devuelve uno con las secciones vacías.
+      parameters:
+        - { name: docenteId, in: query, description: Obligatorio para ADMIN_SISTEMA., schema: { type: string } }
+      responses:
+        '200':
+          description: Perfil del docente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [perfil, correlationId]
+                properties:
+                  perfil: { $ref: '#/components/schemas/PerfilDocente' }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    patch:
+      tags: [Gestión docente]
+      summary: Editar una sección del propio perfil (UPSERT)
+      x-fsd-uc: FSD-UC-006
+      description: Solo el docente titular edita su perfil (RB-04). El contenido del CV nunca se registra en logs (Ley 164).
+      requestBody:
+        $ref: '#/components/requestBodies/ActualizarPerfil'
+      responses:
+        '200': { $ref: '#/components/responses/PerfilActualizado' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /perfil-docente/{docenteId}:
+    parameters:
+      - { name: docenteId, in: path, required: true, schema: { type: string } }
+    patch:
+      tags: [Gestión docente]
+      summary: Editar una sección del perfil indicando el docente
+      x-fsd-uc: FSD-UC-006
+      description: Igual que `PATCH /perfil-docente`; si `docenteId` no es el del usuario autenticado responde 403 `FORBIDDEN_PROFILE_EDIT`.
+      requestBody:
+        $ref: '#/components/requestBodies/ActualizarPerfil'
+      responses:
+        '200': { $ref: '#/components/responses/PerfilActualizado' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /calendario-academico:
+    get:
+      tags: [Calendario académico]
+      summary: Consultar el calendario académico de un período
+      x-fsd-uc: FSD-UC-008
+      description: |
+        DOCENTE y ADMIN_FACULTAD ven el calendario de su facultad fusionado con el institucional,
+        ordenado por `fechaInicio`. ADMIN_SISTEMA puede elegir la facultad con `facultadId`;
+        sin ella ve solo el institucional.
+      parameters:
+        - { name: periodo, in: query, required: true, schema: { $ref: '#/components/schemas/Periodo' } }
+        - { name: facultadId, in: query, description: Solo lo usa ADMIN_SISTEMA., schema: { type: string } }
+      responses:
+        '200':
+          description: Eventos del período.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [periodo, eventos, correlationId]
+                properties:
+                  periodo: { $ref: '#/components/schemas/Periodo' }
+                  eventos:
+                    type: array
+                    items: { $ref: '#/components/schemas/EventoCalendarioConsulta' }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+    put:
+      tags: [Calendario académico]
+      summary: Publicar el calendario académico (reemplaza el existente)
+      x-fsd-uc: FSD-UC-008
+      description: |
+        ADMIN_FACULTAD publica en su facultad; en otra recibe 403 `CROSS_FACULTY_FORBIDDEN` (RB-05).
+        ADMIN_SISTEMA publica el calendario institucional (sin `facultadId`) o el de una facultad.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periodo, eventos]
+              properties:
+                periodo: { $ref: '#/components/schemas/Periodo' }
+                facultadId: { type: string }
+                eventos:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/EventoCalendario' }
+      responses:
+        '200':
+          description: Calendario publicado.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [calendario, correlationId]
+                properties:
+                  calendario:
+                    type: object
+                    required: [periodo, facultadId, eventos, updatedAt]
+                    properties:
+                      periodo: { $ref: '#/components/schemas/Periodo' }
+                      facultadId: { type: string, nullable: true, description: null = calendario institucional. }
+                      eventos:
+                        type: array
+                        items: { $ref: '#/components/schemas/EventoCalendario' }
+                      updatedAt: { type: string, format: date-time }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /asistente/validar-dj:
+    post:
+      tags: [Asistentes de IA]
+      summary: Consulta del Admin. Facultad al modelo sobre una DJ puntual
+      security:
+        - demoAuth: []
+      description: Autenticación de demostración por el encabezado `X-SGAI-Demo-User`; solo el perfil `admin_facultad`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facultad, nombreDocente, consulta]
+              properties:
+                facultad: { type: string, minLength: 3, maxLength: 150 }
+                nombreDocente: { type: string, minLength: 2, maxLength: 120 }
+                periodoAcademico: { $ref: '#/components/schemas/Periodo' }
+                consulta: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200':
+          description: DJ encontrada y respuesta del modelo.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dj, respuestaModelo, correlationId]
+                properties:
+                  dj: { type: object, additionalProperties: true }
+                  respuestaModelo: { type: string }
+                  correlationId: { type: string }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /asistente-tramites/estado:
+    get:
+      tags: [Asistentes de IA]
+      summary: Estado del asistente de trámites DPA
+      security: []
+      responses:
+        '200':
+          description: Configuración del asistente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [iaHabilitada, fuenteDatos, totalTramites, departamentos, correlationId]
+                properties:
+                  iaHabilitada: { type: boolean }
+                  fuenteDatos: { type: string, example: db.json }
+                  totalTramites: { type: integer }
+                  departamentos:
+                    type: array
+                    items: { type: string }
+                  correlationId: { type: string }
+
+  /asistente-tramites/preguntar:
+    post:
+      tags: [Asistentes de IA]
+      summary: Preguntar por un trámite de la DPA (chat público del login)
+      description: Cascada palabra clave → RAG → LLM-router → alternativa, siempre citando la fuente.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pregunta]
+              properties:
+                pregunta: { type: string, minLength: 3, maxLength: 300 }
+      responses:
+        '200':
+          description: Respuesta con su camino y fuente.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [respuesta, correlationId]
+                properties:
+                  respuesta: { type: string }
+                  camino: { type: string }
+                  fuente: { type: object, additionalProperties: true }
+                  correlationId: { type: string }
+                additionalProperties: true
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /agente-dj/preguntar:
+    post:
+      tags: [Asistentes de IA]
+      summary: Preguntar al agente MCP sobre declaraciones juradas
+      description: |
+        Roles: ADMIN_FACULTAD y TECNICO_DPA. Si el agente propone una escritura, la respuesta trae
+        `confirmacionPendiente` y `sessionId`: nada se ejecuta hasta `POST /agente-dj/confirmar`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pregunta]
+              properties:
+                pregunta: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200': { $ref: '#/components/responses/AgenteResultado' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /agente-dj/confirmar:
+    post:
+      tags: [Asistentes de IA]
+      summary: Confirmar o cancelar la acción propuesta por el agente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessionId, confirmar]
+              properties:
+                sessionId: { type: string, minLength: 1 }
+                confirmar: { type: boolean }
+      responses:
+        '200': { $ref: '#/components/responses/AgenteResultado' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+  /orquestador/atender:
+    post:
+      tags: [Asistentes de IA]
+      summary: Chat de atención con orquestación por rol y estado
+      description: Roles DOCENTE, ADMIN_FACULTAD y TECNICO_DPA. Una conversación escalada no vuelve a pasar por IA.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mensaje]
+              properties:
+                conversacionId: { type: string, minLength: 1 }
+                mensaje: { type: string, minLength: 2, maxLength: 500 }
+      responses:
+        '200':
+          description: Respuesta del turno.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [conversacionId, respuesta, intencion, nodo, estadoFlujo, correlationId]
+                properties:
+                  conversacionId: { type: string }
+                  respuesta: { type: string }
+                  intencion: { type: string, enum: [CONSULTA_ESTADO_DJ, DUDA_NORMATIVA, REPORTAR_PROBLEMA, OTRO] }
+                  nodo: { type: string }
+                  estadoFlujo: { type: string, enum: [ABIERTA, ESCALADA] }
+                  correlationId: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/Unprocessable' }
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    demoAuth:
+      type: apiKey
+      in: header
+      name: X-SGAI-Demo-User
+
+  requestBodies:
+    ActualizarPerfil:
+      required: true
+      description: Una sección del CV con su contenido; cada sección se valida con su propio esquema.
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - type: object
+                required: [seccion, data]
+                properties:
+                  seccion: { type: string, enum: [formacion_academica] }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [titulo, institucion, anio]
+                      properties:
+                        titulo: { type: string, minLength: 2, maxLength: 200 }
+                        institucion: { type: string, minLength: 2, maxLength: 200 }
+                        anio: { type: integer, minimum: 1900, maximum: 2100 }
+              - type: object
+                required: [seccion, data]
+                properties:
+                  seccion: { type: string, enum: [publicaciones] }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [titulo, anio]
+                      properties:
+                        titulo: { type: string, minLength: 2, maxLength: 300 }
+                        medio: { type: string, maxLength: 200 }
+                        anio: { type: integer, minimum: 1900, maximum: 2100 }
+              - type: object
+                required: [seccion, data]
+                properties:
+                  seccion: { type: string, enum: [experiencia_docente] }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [institucion, cargo, desde, hasta]
+                      properties:
+                        institucion: { type: string, minLength: 2, maxLength: 200 }
+                        cargo: { type: string, minLength: 2, maxLength: 200 }
+                        desde: { type: integer, minimum: 1900, maximum: 2100 }
+                        hasta: { type: integer, nullable: true, minimum: 1900, maximum: 2100 }
+
+  responses:
+    PerfilActualizado:
+      description: Perfil actualizado.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [perfil, updatedAt, correlationId]
+            properties:
+              perfil: { $ref: '#/components/schemas/PerfilDocente' }
+              updatedAt: { type: string, format: date-time, nullable: true }
+              correlationId: { type: string }
+    AgenteResultado:
+      description: Resultado del turno del agente.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [traza, correlationId]
+            properties:
+              respuesta: { type: string }
+              traza:
+                type: array
+                items: { type: object, additionalProperties: true }
+              confirmacionPendiente: { type: object, additionalProperties: true }
+              sessionId: { type: string }
+              correlationId: { type: string }
+    Unauthorized:
+      description: Falta el token, es inválido o expiró (401).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: El rol o los datos no permiten la operación (403).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: El recurso no existe (404).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unprocessable:
+      description: Los datos enviados no cumplen la validación (422).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooManyRequests:
+      description: Cuenta bloqueada o demasiados intentos (429).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [error, correlationId]
+      properties:
+        error: { type: string, description: 'Código estable, p. ej. CROSS_FACULTY_FORBIDDEN.' }
+        message: { type: string }
+        details: { type: object, additionalProperties: true, description: Errores por campo (solo 422). }
+        correlationId: { type: string }
+    Rol:
+      type: string
+      enum: [DOCENTE, ADMIN_FACULTAD, TECNICO_DPA, ADMIN_SISTEMA]
+    Periodo:
+      type: string
+      pattern: '^\d{4}-(I|II)$'
+      example: 2026-I
+    EstadoDJ:
+      type: string
+      enum: [BORRADOR, EN_REVISION_FACULTAD, EN_REVISION_DPA, DEVUELTA, APROBADA, RECHAZADA]
+    DJResumen:
+      type: object
+      required: [id, tipo, periodoAcademico, estado, updatedAt]
+      properties:
+        id: { type: string }
+        tipo: { type: string }
+        periodoAcademico: { $ref: '#/components/schemas/Periodo' }
+        estado: { $ref: '#/components/schemas/EstadoDJ' }
+        updatedAt: { type: string, format: date-time }
+    DJDetalle:
+      type: object
+      required: [id, docenteId, facultadId, tipo, periodoAcademico, estado, camposFormulario, correlationId]
+      properties:
+        id: { type: string }
+        docenteId: { type: string }
+        facultadId: { type: string }
+        tipo: { type: string }
+        periodoAcademico: { $ref: '#/components/schemas/Periodo' }
+        estado: { $ref: '#/components/schemas/EstadoDJ' }
+        camposFormulario: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        historial:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              estadoAnterior: { $ref: '#/components/schemas/EstadoDJ' }
+              estadoNuevo: { $ref: '#/components/schemas/EstadoDJ' }
+              actorId: { type: string }
+              observaciones: { type: string, nullable: true }
+              timestamp: { type: string, format: date-time }
+        correlationId: { type: string }
+    PerfilDocente:
+      type: object
+      required: [docenteId, formacion_academica, publicaciones, experiencia_docente, updatedAt]
+      properties:
+        docenteId: { type: string }
+        formacion_academica: { type: array, items: { type: object, additionalProperties: true } }
+        publicaciones: { type: array, items: { type: object, additionalProperties: true } }
+        experiencia_docente: { type: array, items: { type: object, additionalProperties: true } }
+        updatedAt: { type: string, format: date-time, nullable: true, description: null mientras el perfil no se haya editado. }
+    EventoCalendario:
+      type: object
+      required: [tipo, nombre, fechaInicio, fechaFin]
+      properties:
+        tipo: { type: string, enum: [INICIO_SEMESTRE, FIN_SEMESTRE, INSCRIPCIONES, EXAMENES, FERIADO, OTRO] }
+        nombre: { type: string, minLength: 2, maxLength: 150 }
+        fechaInicio: { type: string, format: date }
+        fechaFin: { type: string, format: date, description: No puede ser anterior a fechaInicio. }
+    EventoCalendarioConsulta:
+      allOf:
+        - $ref: '#/components/schemas/EventoCalendario'
+        - type: object
+          required: [ambito]
+          properties:
+            ambito: { type: string, enum: [INSTITUCIONAL, FACULTAD] }

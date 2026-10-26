@@ -24,6 +24,13 @@ export const USER_MESSAGES_ES_BO = {
   AGENTE_SESION_AJENA: 'Esta confirmación pertenece a otra sesión.',
   // @see OrquestadorAtencionService — redteam/hallazgos/AI-SEC-001.md (AI-SEC-002)
   CONVERSACION_AJENA: 'Esta conversación pertenece a otro usuario. Inicie una conversación nueva.',
+  // @see FSD-UC-009 · FSD-UC-006 · FSD-UC-008 — RB-04, RB-05
+  CROSS_FACULTY_FORBIDDEN: 'No puede gestionar datos de otra facultad.',
+  INVALID_ROL_INSTITUCIONAL: 'El rol institucional indicado no es válido.',
+  FORBIDDEN_PROFILE_EDIT: 'Solo el docente titular puede editar su perfil.',
+  UNAUTHORIZED_DATA_ACCESS: 'No tiene permiso para acceder a los datos de otro docente.',
+  DOCENTE_ID_REQUIRED: 'Debe indicar el docente cuyo perfil desea consultar.',
+  INVALID_DATE_RANGE: 'La fecha de fin no puede ser anterior a la fecha de inicio.',
 } as const;
 
 export type DomainErrorCode = keyof typeof USER_MESSAGES_ES_BO;

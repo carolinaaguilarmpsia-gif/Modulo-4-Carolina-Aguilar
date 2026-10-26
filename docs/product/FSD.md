@@ -138,6 +138,69 @@ Y no puede ver boletas de otros docentes
 
 ---
 
+### UC-L-04: Gestionar Roles Institucionales de Docentes (FSD-UC-009)
+
+**Actor:** Admin. Facultad / Admin. Sistema → **Endpoint:** `PATCH /api/v1/admin/docentes/{id}/rol-institucional` (contrato: `docs/openapi.yaml`)
+
+```gherkin
+Dado un administrador de facultad de F1
+Cuando asigna rol INVESTIGADOR a un docente de F1
+Entonces el rol queda persistido y la auditoría registra actor y fecha en la misma transacción
+
+Dado un administrador de facultad de F1
+Cuando intenta asignar rol a un docente de F2
+Entonces el sistema retorna HTTP 403 CROSS_FACULTY_FORBIDDEN
+
+Cuando envía un rol que no existe
+Entonces el sistema retorna HTTP 422
+```
+
+**Regla crítica:** RB-05 (misma facultad) y RB-06 (cambio + auditoría atómicos). `null` revoca el rol.
+
+---
+
+### UC-L-05: Gestionar Perfil y CV Docente (FSD-UC-006)
+
+**Actor:** Docente (edita); Admin. Sistema (solo lectura) → **Endpoints:** `GET /api/v1/perfil-docente`, `PATCH /api/v1/perfil-docente`, `PATCH /api/v1/perfil-docente/{docenteId}`
+
+```gherkin
+Dado un docente autenticado
+Cuando actualiza la sección formacion_academica con datos válidos
+Entonces el perfil se crea o actualiza (UPSERT) y se devuelve updatedAt
+
+Dado un docente autenticado
+Cuando intenta PATCH /perfil-docente/{otroDocenteId}
+Entonces el sistema retorna HTTP 403 FORBIDDEN_PROFILE_EDIT
+
+Cuando envía una sección con datos que no cumplen el esquema
+Entonces el sistema retorna HTTP 422 con el detalle de campos
+```
+
+**Regla crítica:** RB-04 (solo el titular edita); el contenido del CV no se registra en logs (Ley 164).
+
+---
+
+### UC-L-06: Gestionar Calendario Académico (FSD-UC-008)
+
+**Actor:** Admin. Facultad (publica); Docente (consulta) → **Endpoints:** `GET` y `PUT /api/v1/calendario-academico`
+
+```gherkin
+Dado un administrador de facultad de F1
+Cuando publica el calendario 2026-I con eventos válidos
+Entonces los docentes de F1 ven los eventos ordenados por fecha de inicio, junto con los institucionales
+
+Dado un administrador de facultad de F1
+Cuando intenta publicar el calendario de F2
+Entonces el sistema retorna HTTP 403 CROSS_FACULTY_FORBIDDEN
+
+Cuando un evento tiene fechaFin anterior a fechaInicio
+Entonces el sistema retorna HTTP 422
+```
+
+> **Desviación documentada respecto al FSD clásico §8:** `GET /calendario-academico` también admite ADMIN_FACULTAD y ADMIN_SISTEMA (quien publica debe poder verificar lo publicado), y `PUT` admite `facultadId` opcional para distinguir el calendario institucional del de una facultad.
+
+---
+
 ## 5. Reglas de Negocio — Tabla de Referencia Rápida ⚡
 
 | ID | Regla (en una línea) | Módulo afectado | Test de referencia |
@@ -308,6 +371,7 @@ Una task está **Done** cuando:
 | 06/07/2026 | Sprint 2 | Migración a capa viva `docs/product/FSD.md` (desde `docs/LFSD/LFSD.md`); M-AUTH y M-DJ pasan a 🟡 En progreso; se crea `DD-UC-001` para FSD-UC-002 | Carolina Aguilar |
 | 06/07/2026 | Sprint 2 | Se crea `DD-UC-002` para FSD-UC-001 (M-AUTH); versionados `PR-IMPL-003`/`PR-IMPL-004`; detectada e informada inconsistencia de ID de regla en el FSD (RB-04→RB-07 para bloqueo de login, ver `DD-UC-002` §1) | Carolina Aguilar |
 | 06/07/2026 | Sprint 2 | Ejecutados `PR-IMPL-003`/`004`: `POST /api/v1/auth/login` real con JWT+bcrypt, 8 tests (100% cobertura), verificado con los 4 roles y el bloqueo RB-07 | Carolina Aguilar |
+| 25/10/2026 | Sprint 3 | Implementados FSD-UC-009 (roles institucionales), FSD-UC-006 (perfil y CV) y FSD-UC-008 (calendario académico) con tests unitarios y HTTP; se crea el contrato OpenAPI `docs/openapi.yaml` con todos los endpoints del producto y un test que falla si una ruta montada no está declarada | Carolina Aguilar |
 
 > **Instrucción:** Actualizar este log al cierre de cada sprint con los cambios realizados al LFSD (tasks completadas, módulos actualizados, riesgos resueltos).
 
