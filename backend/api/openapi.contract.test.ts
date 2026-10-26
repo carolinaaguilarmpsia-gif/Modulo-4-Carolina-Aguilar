@@ -1,14 +1,13 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { app } from './app.js';
+import { construirDocumentoOpenApi } from './openapi/document.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const require = createRequire(import.meta.url);
-const yaml = require('js-yaml') as { load(texto: string): unknown };
 
 type Operacion = {
+  servers?: { url: string }[];
   security?: unknown[];
   requestBody?: unknown;
   responses?: Record<string, unknown>;
@@ -17,16 +16,17 @@ type Operacion = {
 type Spec = {
   openapi: string;
   servers: { url: string }[];
-  paths: Record<string, Record<string, unknown> & { servers?: { url: string }[] }>;
+  paths: Record<string, Record<string, unknown>>;
   components: Record<string, Record<string, unknown>>;
 };
 
-const spec = yaml.load(readFileSync(join(__dirname, '../../docs/openapi.yaml'), 'utf-8')) as Spec;
+const archivo = JSON.parse(readFileSync(join(__dirname, '../../openapi.json'), 'utf-8')) as Spec;
+const spec = archivo;
 const METODOS = ['get', 'post', 'put', 'patch', 'delete'];
 
-/** `servers` del path (si lo trae) o los globales, unido a la ruta: así `/health` queda fuera de `/api/v1`. */
-function rutaCompleta(ruta: string, item: { servers?: { url: string }[] }): string {
-  const base = (item.servers?.[0]?.url ?? spec.servers[0].url).replace(/\/$/, '');
+/** `servers` de la operación (si lo trae) o los globales, unido a la ruta: así `/health` queda fuera de `/api/v1`. */
+function rutaCompleta(ruta: string, op: Operacion): string {
+  const base = (op.servers?.[0]?.url ?? spec.servers[0].url).replace(/\/$/, '');
   return `${base}${ruta}`.replace(/\{(\w+)\}/g, ':$1');
 }
 
@@ -34,7 +34,8 @@ function operacionesDelContrato(): Map<string, Operacion> {
   const mapa = new Map<string, Operacion>();
   for (const [ruta, item] of Object.entries(spec.paths)) {
     for (const metodo of METODOS) {
-      if (item[metodo]) mapa.set(`${metodo.toUpperCase()} ${rutaCompleta(ruta, item)}`, item[metodo] as Operacion);
+      const op = item[metodo] as Operacion | undefined;
+      if (op) mapa.set(`${metodo.toUpperCase()} ${rutaCompleta(ruta, op)}`, op);
     }
   }
   return mapa;
@@ -60,9 +61,13 @@ function endpointsMontados(capas: Capa[], prefijo = ''): string[] {
   return resultado;
 }
 
-describe('Contrato OpenAPI — docs/openapi.yaml', () => {
+describe('Contrato OpenAPI — openapi.json (generado desde el código)', () => {
   const declarados = operacionesDelContrato();
   const montados = endpointsMontados((app as unknown as { _router: { stack: Capa[] } })._router.stack);
+
+  it('openapi.json versionado coincide con lo que genera el código (sin drift)', () => {
+    expect(archivo).toEqual(JSON.parse(JSON.stringify(construirDocumentoOpenApi())));
+  });
 
   it('es un documento OpenAPI 3 con su servidor y sus rutas', () => {
     expect(spec.openapi).toMatch(/^3\./);

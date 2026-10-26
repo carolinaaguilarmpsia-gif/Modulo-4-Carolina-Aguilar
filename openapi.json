@@ -1,0 +1,2576 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SGAI API — Sistema de Gestión Académica Integral",
+    "version": "8.2.0",
+    "description": "Contrato generado desde el código del backend (Express + Zod). Prefijo /api/v1 (salvo /health). Autenticación: Bearer JWT de POST /auth/login. Toda respuesta incluye correlationId. Cada operación indica el caso de uso del FSD que implementa en x-fsd-uc.",
+    "contact": {
+      "name": "Equipo DPA — Carolina Aguilar"
+    },
+    "license": {
+      "name": "Uso académico — UMSS"
+    }
+  },
+  "servers": [
+    {
+      "url": "/api/v1"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Sistema",
+      "description": "Salud del servicio."
+    },
+    {
+      "name": "Autenticación",
+      "description": "Login y control de acceso por roles."
+    },
+    {
+      "name": "Declaraciones juradas",
+      "description": "Ciclo de la declaración jurada."
+    },
+    {
+      "name": "Gestión docente",
+      "description": "Roles institucionales y perfil del docente."
+    },
+    {
+      "name": "Calendario académico",
+      "description": "Publicación y consulta del calendario."
+    },
+    {
+      "name": "Asistentes de IA",
+      "description": "Asistente de trámites, agente MCP y orquestador."
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "demoAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-SGAI-Demo-User"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Código estable, p. ej. CROSS_FACULTY_FORBIDDEN."
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Errores por campo (solo 422)."
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "correlationId"
+        ]
+      },
+      "Rol": {
+        "type": "string",
+        "enum": [
+          "DOCENTE",
+          "ADMIN_FACULTAD",
+          "TECNICO_DPA",
+          "ADMIN_SISTEMA"
+        ]
+      },
+      "EstadoDJ": {
+        "type": "string",
+        "enum": [
+          "BORRADOR",
+          "EN_REVISION_FACULTAD",
+          "APROBADA",
+          "DEVUELTA",
+          "EN_REVISION_DPA",
+          "RECHAZADA"
+        ]
+      },
+      "RolInstitucional": {
+        "type": "string",
+        "enum": [
+          "AUTORIDAD",
+          "INVESTIGADOR",
+          "ADMINISTRATIVO"
+        ]
+      },
+      "DJResumen": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "periodoAcademico": {
+            "type": "string",
+            "pattern": "^\\d{4}-(I|II)$",
+            "example": "2026-I"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/EstadoDJ"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "periodoAcademico",
+          "estado",
+          "updatedAt"
+        ]
+      },
+      "DJDetalle": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "docenteId": {
+            "type": "string"
+          },
+          "facultadId": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string"
+          },
+          "periodoAcademico": {
+            "type": "string",
+            "pattern": "^\\d{4}-(I|II)$",
+            "example": "2026-I"
+          },
+          "estado": {
+            "$ref": "#/components/schemas/EstadoDJ"
+          },
+          "camposFormulario": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "historial": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "estadoAnterior": {
+                  "$ref": "#/components/schemas/EstadoDJ"
+                },
+                "estadoNuevo": {
+                  "$ref": "#/components/schemas/EstadoDJ"
+                },
+                "actorId": {
+                  "type": "string"
+                },
+                "observaciones": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "estadoAnterior",
+                "estadoNuevo",
+                "actorId",
+                "timestamp"
+              ]
+            }
+          },
+          "correlationId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "docenteId",
+          "facultadId",
+          "tipo",
+          "periodoAcademico",
+          "estado",
+          "camposFormulario",
+          "correlationId"
+        ]
+      },
+      "PerfilDocente": {
+        "type": "object",
+        "properties": {
+          "docenteId": {
+            "type": "string"
+          },
+          "formacion_academica": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            }
+          },
+          "publicaciones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            }
+          },
+          "experiencia_docente": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            }
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "format": "date-time",
+            "description": "null mientras el perfil no se haya editado."
+          }
+        },
+        "required": [
+          "docenteId",
+          "formacion_academica",
+          "publicaciones",
+          "experiencia_docente",
+          "updatedAt"
+        ]
+      },
+      "EventoCalendario": {
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "INICIO_SEMESTRE",
+              "FIN_SEMESTRE",
+              "INSCRIPCIONES",
+              "EXAMENES",
+              "FERIADO",
+              "OTRO"
+            ]
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "fechaInicio": {
+            "type": "string",
+            "format": "date"
+          },
+          "fechaFin": {
+            "type": "string",
+            "format": "date",
+            "description": "No puede ser anterior a fechaInicio."
+          }
+        },
+        "required": [
+          "tipo",
+          "nombre",
+          "fechaInicio",
+          "fechaFin"
+        ]
+      },
+      "EventoCalendarioConsulta": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EventoCalendario"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ambito": {
+                "type": "string",
+                "enum": [
+                  "INSTITUCIONAL",
+                  "FACULTAD"
+                ]
+              }
+            },
+            "required": [
+              "ambito"
+            ]
+          }
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "tags": [
+          "Sistema"
+        ],
+        "summary": "Estado del servicio",
+        "description": "Estado del servicio",
+        "servers": [
+          {
+            "url": "/"
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "El servicio responde.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string"
+                    },
+                    "module": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "module"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Iniciar sesión",
+        "description": "Valida credenciales (LDAP con respaldo local). 5 intentos fallidos bloquean la cuenta 15 minutos (RB-07).",
+        "x-fsd-uc": "FSD-UC-001",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sesión iniciada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string"
+                    },
+                    "rol": {
+                      "$ref": "#/components/schemas/Rol"
+                    },
+                    "nombreCompleto": {
+                      "type": "string"
+                    },
+                    "facultadId": {
+                      "type": "string"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "rol",
+                    "nombreCompleto",
+                    "facultadId",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Cuenta bloqueada o demasiados intentos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/declaraciones-juradas": {
+      "get": {
+        "operationId": "listarDeclaracionesJuradas",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Listar las declaraciones juradas visibles para el actor",
+        "description": "Listar las declaraciones juradas visibles para el actor",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/EstadoDJ"
+            },
+            "required": false,
+            "name": "estado",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DJResumen"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "total",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "crearDeclaracionJurada",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Crear una declaración jurada en BORRADOR",
+        "description": "Solo docentes con vinculación activa (RB-01).",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "LABORAL",
+                      "PATRIMONIAL",
+                      "INTERESES"
+                    ]
+                  },
+                  "periodoAcademico": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(I|II)$"
+                  },
+                  "camposFormulario": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    }
+                  }
+                },
+                "required": [
+                  "tipo",
+                  "periodoAcademico",
+                  "camposFormulario"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Declaración jurada creada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "estado": {
+                      "$ref": "#/components/schemas/EstadoDJ"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "estado",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/declaraciones-juradas/estadisticas": {
+      "get": {
+        "operationId": "estadisticasDeclaracionesJuradas",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Conteo de declaraciones juradas por estado",
+        "description": "DOCENTE ve solo las suyas; ADMIN_FACULTAD solo su facultad (RB-05); TECNICO_DPA y ADMIN_SISTEMA ven todas y pueden filtrar por facultad.",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "facultadId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conteo por estado, con 0 donde no hay declaraciones.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "porEstado": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "porEstado",
+                    "total",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/declaraciones-juradas/{id}": {
+      "get": {
+        "operationId": "obtenerDeclaracionJurada",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Detalle de una declaración jurada con su historial",
+        "description": "Detalle de una declaración jurada con su historial",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle e historial de estados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DJDetalle"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "editarDeclaracionJurada",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Editar los campos de una declaración jurada (solo BORRADOR o DEVUELTA)",
+        "description": "Una declaración aprobada o en revisión no es editable (RB-03).",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "camposFormulario": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    }
+                  }
+                },
+                "required": [
+                  "camposFormulario"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Declaración actualizada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DJDetalle"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/declaraciones-juradas/{id}/estado": {
+      "patch": {
+        "operationId": "transicionarDeclaracionJurada",
+        "tags": [
+          "Declaraciones juradas"
+        ],
+        "summary": "Transicionar el estado de una declaración jurada",
+        "description": "Máquina de estados de la declaración. El cambio de estado y su historial se guardan en una sola transacción (RB-06).",
+        "x-fsd-uc": "FSD-UC-002",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "comando": {
+                    "type": "string",
+                    "enum": [
+                      "ENVIAR",
+                      "APROBAR",
+                      "DEVOLVER",
+                      "ESCALAR_DPA",
+                      "REENVIAR",
+                      "RECHAZAR"
+                    ]
+                  },
+                  "observaciones": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 1000
+                  }
+                },
+                "required": [
+                  "comando"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transición aplicada.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "estadoAnterior": {
+                      "$ref": "#/components/schemas/EstadoDJ"
+                    },
+                    "estadoNuevo": {
+                      "$ref": "#/components/schemas/EstadoDJ"
+                    },
+                    "historialId": {
+                      "type": "string"
+                    },
+                    "notificacionEncolada": {
+                      "type": "boolean"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "estadoAnterior",
+                    "estadoNuevo",
+                    "historialId",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/docentes/{id}/rol-institucional": {
+      "patch": {
+        "operationId": "asignarRolInstitucional",
+        "tags": [
+          "Gestión docente"
+        ],
+        "summary": "Asignar o revocar el rol institucional de un docente",
+        "description": "ADMIN_FACULTAD solo gestiona docentes de su facultad (RB-05, 403 CROSS_FACULTY_FORBIDDEN); ADMIN_SISTEMA gestiona a cualquiera. El cambio y su registro de auditoría (actor y fecha) se guardan de forma atómica (RB-06). null revoca el rol.",
+        "x-fsd-uc": "FSD-UC-009",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rolInstitucional": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "AUTORIDAD",
+                      "INVESTIGADOR",
+                      "ADMINISTRATIVO"
+                    ]
+                  }
+                },
+                "required": [
+                  "rolInstitucional"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rol actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "docenteId": {
+                      "type": "string"
+                    },
+                    "rolAnterior": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/RolInstitucional"
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "rolNuevo": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/RolInstitucional"
+                        },
+                        {
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "docenteId",
+                    "rolAnterior",
+                    "rolNuevo",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/perfil-docente": {
+      "get": {
+        "operationId": "obtenerPerfilDocente",
+        "tags": [
+          "Gestión docente"
+        ],
+        "summary": "Consultar el perfil y CV docente",
+        "description": "DOCENTE consulta el suyo; ADMIN_SISTEMA consulta el de un docente indicado con docenteId (solo lectura). Un docente que pide el de otro recibe 403 UNAUTHORIZED_DATA_ACCESS. Si el perfil aún no existe, devuelve uno con secciones vacías.",
+        "x-fsd-uc": "FSD-UC-006",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Obligatorio para ADMIN_SISTEMA."
+            },
+            "required": false,
+            "description": "Obligatorio para ADMIN_SISTEMA.",
+            "name": "docenteId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil del docente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "perfil": {
+                      "$ref": "#/components/schemas/PerfilDocente"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "perfil",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "actualizarPerfilDocente",
+        "tags": [
+          "Gestión docente"
+        ],
+        "summary": "Editar una sección del propio perfil (UPSERT)",
+        "description": "Solo el docente titular edita su perfil (RB-04). El contenido del CV nunca se registra en logs (Ley 164).",
+        "x-fsd-uc": "FSD-UC-006",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "formacion_academica"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "titulo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "institucion": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "anio": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "titulo",
+                            "institucion",
+                            "anio"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "publicaciones"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "titulo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 300
+                            },
+                            "medio": {
+                              "type": "string",
+                              "maxLength": 200
+                            },
+                            "anio": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "titulo",
+                            "anio"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "experiencia_docente"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "institucion": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "cargo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "desde": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            },
+                            "hasta": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "institucion",
+                            "cargo",
+                            "desde",
+                            "hasta"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "perfil": {
+                      "$ref": "#/components/schemas/PerfilDocente"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "perfil",
+                    "updatedAt",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/perfil-docente/{docenteId}": {
+      "patch": {
+        "operationId": "actualizarPerfilDeDocente",
+        "tags": [
+          "Gestión docente"
+        ],
+        "summary": "Editar una sección del perfil indicando el docente",
+        "description": "Igual que PATCH /perfil-docente; si docenteId no es el del usuario autenticado responde 403 FORBIDDEN_PROFILE_EDIT.",
+        "x-fsd-uc": "FSD-UC-006",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "docenteId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "formacion_academica"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "titulo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "institucion": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "anio": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "titulo",
+                            "institucion",
+                            "anio"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "publicaciones"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "titulo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 300
+                            },
+                            "medio": {
+                              "type": "string",
+                              "maxLength": 200
+                            },
+                            "anio": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "titulo",
+                            "anio"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "seccion": {
+                        "type": "string",
+                        "enum": [
+                          "experiencia_docente"
+                        ]
+                      },
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "institucion": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "cargo": {
+                              "type": "string",
+                              "minLength": 2,
+                              "maxLength": 200
+                            },
+                            "desde": {
+                              "type": "integer",
+                              "minimum": 1900,
+                              "maximum": 2100
+                            },
+                            "hasta": {
+                              "type": "integer",
+                              "nullable": true,
+                              "minimum": 1900,
+                              "maximum": 2100
+                            }
+                          },
+                          "required": [
+                            "institucion",
+                            "cargo",
+                            "desde",
+                            "hasta"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "seccion",
+                      "data"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "perfil": {
+                      "$ref": "#/components/schemas/PerfilDocente"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "date-time"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "perfil",
+                    "updatedAt",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calendario-academico": {
+      "get": {
+        "operationId": "consultarCalendarioAcademico",
+        "tags": [
+          "Calendario académico"
+        ],
+        "summary": "Consultar el calendario académico de un período",
+        "description": "DOCENTE y ADMIN_FACULTAD ven el calendario de su facultad fusionado con el institucional, ordenado por fechaInicio. ADMIN_SISTEMA puede elegir la facultad con facultadId; sin ella ve solo el institucional.",
+        "x-fsd-uc": "FSD-UC-008",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(I|II)$"
+            },
+            "required": true,
+            "name": "periodo",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "facultadId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Eventos del período.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "periodo": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-(I|II)$",
+                      "example": "2026-I"
+                    },
+                    "eventos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EventoCalendarioConsulta"
+                      }
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "periodo",
+                    "eventos",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "publicarCalendarioAcademico",
+        "tags": [
+          "Calendario académico"
+        ],
+        "summary": "Publicar el calendario académico (reemplaza el existente)",
+        "description": "ADMIN_FACULTAD publica en su facultad; en otra recibe 403 CROSS_FACULTY_FORBIDDEN (RB-05). ADMIN_SISTEMA publica el calendario institucional (sin facultadId) o el de una facultad.",
+        "x-fsd-uc": "FSD-UC-008",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "periodo": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(I|II)$"
+                  },
+                  "facultadId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "eventos": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "tipo": {
+                          "type": "string",
+                          "enum": [
+                            "INICIO_SEMESTRE",
+                            "FIN_SEMESTRE",
+                            "INSCRIPCIONES",
+                            "EXAMENES",
+                            "FERIADO",
+                            "OTRO"
+                          ]
+                        },
+                        "nombre": {
+                          "type": "string",
+                          "minLength": 2,
+                          "maxLength": 150
+                        },
+                        "fechaInicio": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "fechaFin": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        }
+                      },
+                      "required": [
+                        "tipo",
+                        "nombre",
+                        "fechaInicio",
+                        "fechaFin"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "periodo",
+                  "eventos"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calendario publicado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "calendario": {
+                      "type": "object",
+                      "properties": {
+                        "periodo": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-(I|II)$",
+                          "example": "2026-I"
+                        },
+                        "facultadId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "null = calendario institucional."
+                        },
+                        "eventos": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/EventoCalendario"
+                          }
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "periodo",
+                        "facultadId",
+                        "eventos",
+                        "updatedAt"
+                      ]
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "calendario",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asistente/validar-dj": {
+      "post": {
+        "operationId": "validarDeclaracionConModelo",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Consulta del Admin. Facultad al modelo sobre una declaración jurada puntual",
+        "description": "Autenticación de demostración por el encabezado X-SGAI-Demo-User; solo el perfil admin_facultad.",
+        "security": [
+          {
+            "demoAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "facultad": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 150
+                  },
+                  "nombreDocente": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 120
+                  },
+                  "periodoAcademico": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(I|II)$"
+                  },
+                  "consulta": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "facultad",
+                  "nombreDocente",
+                  "consulta"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Declaración encontrada y respuesta del modelo.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dj": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      }
+                    },
+                    "respuestaModelo": {
+                      "type": "string"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dj",
+                    "respuestaModelo",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asistente-tramites/estado": {
+      "get": {
+        "operationId": "estadoAsistenteTramites",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Estado del asistente de trámites de la DPA",
+        "description": "Estado del asistente de trámites de la DPA",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Configuración del asistente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "iaHabilitada": {
+                      "type": "boolean"
+                    },
+                    "fuenteDatos": {
+                      "type": "string"
+                    },
+                    "totalTramites": {
+                      "type": "integer"
+                    },
+                    "departamentos": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "iaHabilitada",
+                    "fuenteDatos",
+                    "totalTramites",
+                    "departamentos",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/asistente-tramites/preguntar": {
+      "post": {
+        "operationId": "preguntarAsistenteTramites",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Preguntar por un trámite de la DPA (chat público del login)",
+        "description": "Cascada palabra clave, RAG, LLM-router y alternativa, siempre citando la fuente.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pregunta": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "pregunta"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta con su camino y su fuente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "respuesta": {
+                      "type": "string"
+                    },
+                    "camino": {
+                      "type": "string"
+                    },
+                    "fuente": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      }
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "respuesta",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agente-dj/preguntar": {
+      "post": {
+        "operationId": "preguntarAgenteDj",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Preguntar al agente MCP sobre declaraciones juradas",
+        "description": "Roles ADMIN_FACULTAD y TECNICO_DPA. Si el agente propone una escritura, la respuesta trae confirmacionPendiente y sessionId: nada se ejecuta hasta POST /agente-dj/confirmar.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pregunta": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "pregunta"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado del turno del agente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "respuesta": {
+                      "type": "string"
+                    },
+                    "traza": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      }
+                    },
+                    "confirmacionPendiente": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      }
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "traza",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agente-dj/confirmar": {
+      "post": {
+        "operationId": "confirmarAccionAgenteDj",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Confirmar o cancelar la acción propuesta por el agente",
+        "description": "Confirmar o cancelar la acción propuesta por el agente",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "confirmar": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "sessionId",
+                  "confirmar"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado de la confirmación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "respuesta": {
+                      "type": "string"
+                    },
+                    "traza": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      }
+                    },
+                    "confirmacionPendiente": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      }
+                    },
+                    "sessionId": {
+                      "type": "string"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "traza",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orquestador/atender": {
+      "post": {
+        "operationId": "atenderOrquestador",
+        "tags": [
+          "Asistentes de IA"
+        ],
+        "summary": "Chat de atención con orquestación por rol y estado",
+        "description": "Roles DOCENTE, ADMIN_FACULTAD y TECNICO_DPA. Una conversación escalada no vuelve a pasar por IA.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "conversacionId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "mensaje": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "mensaje"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta del turno.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "conversacionId": {
+                      "type": "string"
+                    },
+                    "respuesta": {
+                      "type": "string"
+                    },
+                    "intencion": {
+                      "type": "string",
+                      "enum": [
+                        "CONSULTA_ESTADO_DJ",
+                        "DUDA_NORMATIVA",
+                        "REPORTAR_PROBLEMA",
+                        "OTRO"
+                      ]
+                    },
+                    "nodo": {
+                      "type": "string"
+                    },
+                    "estadoFlujo": {
+                      "type": "string",
+                      "enum": [
+                        "ABIERTA",
+                        "ESCALADA"
+                      ]
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "conversacionId",
+                    "respuesta",
+                    "intencion",
+                    "nodo",
+                    "estadoFlujo",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

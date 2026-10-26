@@ -1,0 +1,23 @@
+# Lint del contrato OpenAPI (openapi.json). Se ejecuta en CI con `npm run openapi:lint`.
+extends: ["spectral:oas"]
+rules:
+  # Todo endpoint debe indicar el caso de uso del FSD que implementa (trazabilidad exigida en la demo).
+  operacion-con-caso-de-uso:
+    description: Toda operación declara el caso de uso del FSD en `x-fsd-uc` (excepto las de infraestructura).
+    severity: warn
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      field: x-fsd-uc
+      function: truthy
+overrides:
+  # Salud y asistentes de IA no corresponden a un caso de uso del FSD clásico.
+  - files:
+      - "openapi.json#/paths/~1health"
+      - "openapi.json#/paths/~1asistente~1validar-dj"
+      - "openapi.json#/paths/~1asistente-tramites~1estado"
+      - "openapi.json#/paths/~1asistente-tramites~1preguntar"
+      - "openapi.json#/paths/~1agente-dj~1preguntar"
+      - "openapi.json#/paths/~1agente-dj~1confirmar"
+      - "openapi.json#/paths/~1orquestador~1atender"
+    rules:
+      operacion-con-caso-de-uso: "off"

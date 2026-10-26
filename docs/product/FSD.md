@@ -140,7 +140,7 @@ Y no puede ver boletas de otros docentes
 
 ### UC-L-04: Gestionar Roles Institucionales de Docentes (FSD-UC-009)
 
-**Actor:** Admin. Facultad / Admin. Sistema → **Endpoint:** `PATCH /api/v1/admin/docentes/{id}/rol-institucional` (contrato: `docs/openapi.yaml`)
+**Actor:** Admin. Facultad / Admin. Sistema → **Endpoint:** `PATCH /api/v1/admin/docentes/{id}/rol-institucional` (contrato: `openapi.json`)
 
 ```gherkin
 Dado un administrador de facultad de F1
@@ -371,7 +371,7 @@ Una task está **Done** cuando:
 | 06/07/2026 | Sprint 2 | Migración a capa viva `docs/product/FSD.md` (desde `docs/LFSD/LFSD.md`); M-AUTH y M-DJ pasan a 🟡 En progreso; se crea `DD-UC-001` para FSD-UC-002 | Carolina Aguilar |
 | 06/07/2026 | Sprint 2 | Se crea `DD-UC-002` para FSD-UC-001 (M-AUTH); versionados `PR-IMPL-003`/`PR-IMPL-004`; detectada e informada inconsistencia de ID de regla en el FSD (RB-04→RB-07 para bloqueo de login, ver `DD-UC-002` §1) | Carolina Aguilar |
 | 06/07/2026 | Sprint 2 | Ejecutados `PR-IMPL-003`/`004`: `POST /api/v1/auth/login` real con JWT+bcrypt, 8 tests (100% cobertura), verificado con los 4 roles y el bloqueo RB-07 | Carolina Aguilar |
-| 25/10/2026 | Sprint 3 | Implementados FSD-UC-009 (roles institucionales), FSD-UC-006 (perfil y CV) y FSD-UC-008 (calendario académico) con tests unitarios y HTTP; se crea el contrato OpenAPI `docs/openapi.yaml` con todos los endpoints del producto y un test que falla si una ruta montada no está declarada | Carolina Aguilar |
+| 25/10/2026 | Sprint 3 | Implementados FSD-UC-009 (roles institucionales), FSD-UC-006 (perfil y CV) y FSD-UC-008 (calendario académico) con tests unitarios y HTTP; se crea el contrato OpenAPI `openapi.json`, generado desde el código (`npm run openapi:export`) con los 20 endpoints del producto, validado en CI con Spectral y un chequeo de drift, y un test que falla si una ruta montada no está declarada | Carolina Aguilar |
 
 > **Instrucción:** Actualizar este log al cierre de cada sprint con los cambios realizados al LFSD (tasks completadas, módulos actualizados, riesgos resueltos).
 

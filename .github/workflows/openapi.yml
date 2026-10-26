@@ -1,0 +1,52 @@
+name: OpenAPI
+
+# En cada pull request: (1) el contrato versionado debe coincidir con el que genera el código (drift)
+# y (2) debe pasar el lint de Spectral. oasdiff es opcional y no bloquea.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  contrato:
+    name: Drift y Spectral
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: |
+          npm ci
+          npm ci --prefix backend
+
+      - name: Drift — openapi.json coincide con lo que genera el código
+        run: npm run openapi:check
+
+      - name: Spectral — lint del contrato
+        run: npm run openapi:lint
+
+      - name: Toda ruta montada está en el contrato (y viceversa)
+        run: NODE_OPTIONS=--experimental-vm-modules npx jest --watchman=false backend/api/openapi.contract
+
+  cambios-incompatibles:
+    name: oasdiff (opcional)
+    runs-on: ubuntu-22.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cambios incompatibles frente a la rama base
+        uses: oasdiff/oasdiff-action/breaking@v0.0.21
+        with:
+          base: origin/${{ github.base_ref }}:openapi.json
+          revision: HEAD:openapi.json
+          fail-on: ERR
