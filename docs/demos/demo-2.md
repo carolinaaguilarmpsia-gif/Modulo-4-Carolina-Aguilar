@@ -64,6 +64,6 @@ npm run openapi:lint
 NODE_OPTIONS=--experimental-vm-modules npx jest --watchman=false
 ```
 
-## 5. Registro
+## 6. Registro
 
 Esta tabla también se registra en Classroom, con el enlace al repositorio de la rama `release/8.2.0`. El aporte del release está en `8.2.0-aportes.md`.
