@@ -50,3 +50,4 @@ Tras las correcciones: 1250 casos generados, todos correctos.
 
 - El formato de error es `{ error, message, correlationId }`. La S05 recomienda RFC 9457 (`application/problem+json`); no se adoptó en esta entrega.
 - Los repositorios son en memoria, así que no hay migraciones ni semilla de base de datos en el job de conformidad.
+
