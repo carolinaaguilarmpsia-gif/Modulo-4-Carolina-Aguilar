@@ -10,7 +10,7 @@ const fechaIso = z
 const EventoSchema = z
   .object({
     tipo: z.enum(TIPOS_EVENTO_CALENDARIO as [string, ...string[]]),
-    nombre: z.string().trim().min(2).max(150),
+    nombre: z.string().max(150).trim().min(2),
     fechaInicio: fechaIso,
     fechaFin: fechaIso,
   })

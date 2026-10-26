@@ -53,6 +53,20 @@ describe('HTTP — errores del cliente nunca son un 500', () => {
     expect(res.status).toBe(422);
   });
 
+  it('422: el largo máximo se valida sobre lo que envía el cliente (espacios sobrantes no lo esquivan)', async () => {
+    const pregunta = `${'a'.repeat(300)}  `;
+
+    const res = await request(app).post('/api/v1/asistente-tramites/preguntar').send({ pregunta });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('200: una pregunta con espacios alrededor sigue siendo válida', async () => {
+    const res = await request(app).post('/api/v1/asistente-tramites/preguntar').send({ pregunta: '  que requisitos necesito  ' });
+
+    expect(res.status).toBe(200);
+  });
+
   it('200: el listado sigue funcionando con page y estado válidos', async () => {
     const res = await request(app)
       .get('/api/v1/declaraciones-juradas?page=1&estado=BORRADOR')

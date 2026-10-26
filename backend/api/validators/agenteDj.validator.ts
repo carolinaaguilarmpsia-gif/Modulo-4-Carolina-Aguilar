@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const PreguntarAgenteDjSchema = z.object({
-  pregunta: z.string().trim().min(3, 'Escriba su pregunta').max(500),
+  pregunta: z.string().max(500).trim().min(3, 'Escriba su pregunta'),
 });
 
 export const ConfirmarAgenteDjSchema = z.object({
