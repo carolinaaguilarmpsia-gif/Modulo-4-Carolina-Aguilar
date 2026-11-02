@@ -2,9 +2,9 @@
 [1mImage Source: [0mdocker://sgai-backend:despues
 [1mExtracting image from docker-engine...[0m (this can take a while for large images)
 [1mAnalyzing image...[0m
-  efficiency: 98.6441 %
+  efficiency: 98.7029 %
   wastedBytes: 5378612 bytes (5.4 MB)
-  userWastedPercent: 3.1067 %
+  userWastedPercent: 2.9047 %
 [1mInefficient Files:[0m
 Count  Wasted Space  File Path
     3        2.3 MB  /var/cache/debconf/templates.dat-old

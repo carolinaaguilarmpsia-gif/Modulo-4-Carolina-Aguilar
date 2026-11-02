@@ -15,10 +15,10 @@
 
 | Medida | Antes | Después |
 |---|---|---|
-| Tamaño en disco (DISK USAGE) | 412 MB | **366 MB** (−11 %) |
-| Tamaño comprimido (CONTENT SIZE) | 99,5 MB | **84,8 MB** (−15 %) |
+| Tamaño en disco (DISK USAGE) | 412 MB | **384 MB** (−7 %) |
+| Tamaño comprimido (CONTENT SIZE) | 99,5 MB | **89,8 MB** (−10 %) |
 | Número de capas | 9 | 9 |
-| Dive: eficiencia / espacio desperdiciado | 98,69 % / 5,3 MB | 98,64 % / 5,4 MB |
+| Dive: eficiencia / espacio desperdiciado | 98,69 % / 5,3 MB | 98,70 % / 5,4 MB |
 | Usuario con el que corre | **root** (`uid=0`) | **`1000:1000`** (`uid=1000(node)`) |
 | CVE HIGH + CRITICAL (Trivy) | **100** (66 del sistema Debian + 34 de npm) | **61** (49 Debian + 12 npm) |
 | Avisos de hadolint | 0 | 0 |
@@ -49,7 +49,7 @@ Evidencia: `docs/laboratorios/evidencia/` (archivos `01` a `07`, con sufijo `ant
 
 | Cambio | Dónde | Por qué | Efecto medido |
 |---|---|---|---|
-| Multi-stage: una etapa instala solo dependencias de producción y la final copia `node_modules` | `backend/Dockerfile` | No llevar TypeScript, `@types` ni caché de npm | −46 MB en disco; −15 % comprimida |
+| Multi-stage: una etapa instala solo dependencias de producción y la final copia `node_modules` | `backend/Dockerfile` | No llevar TypeScript, `@types` ni caché de npm | −28 MB en disco; −10 % comprimida |
 | `npm ci --omit=dev` y `npm cache clean` | `backend/Dockerfile` | Sin dependencias de desarrollo | Menos CVE de npm (34 → 12 junto con el cambio de base) |
 | Base `node:24.22.2-bookworm-slim` con digest `sha256:c86ecead…` | `backend/Dockerfile` | Base con soporte, versión exacta y reproducible | CVE de Debian 66 → 49 |
 | `USER 1000:1000` | `backend/Dockerfile` | No correr como root. Se usa el número y no el nombre para que sea verificable por hosts y orquestadores (hadolint DL3066) | `uid=0` → `uid=1000` |
@@ -60,15 +60,15 @@ Evidencia: `docs/laboratorios/evidencia/` (archivos `01` a `07`, con sufijo `ant
 | `compose.yaml` nuevo en la raíz, con healthcheck en `node` sobre `/health` | `compose.yaml` | El proyecto no tenía compose; hace falta para seguir la guía (`docker compose build/up --wait`). El healthcheck va aquí, no en la imagen, para no alterar lo medido | `up --wait` espera a que esté sano |
 
 ### Un fallo que tuvimos que arreglar
-El primer intento dejó `tsx` fuera: lo añadí con `npm install --no-save --omit=dev tsx`, pero `tsx` estaba en `devDependencies` y `--omit=dev` lo descartó. El contenedor salió con código 1 y `ERR_MODULE_NOT_FOUND: Cannot find package 'tsx'`. Se arregló moviéndolo a `dependencies`. Una imagen más pequeña que no arranca no sirve; por eso la comprobación final incluye levantar el stack y escribir en `data/`.
+El primer intento dejó `tsx` fuera: lo añadí con `npm install --no-save --omit=dev tsx`, pero `tsx` estaba en `devDependencies` y `--omit=dev` lo descartó. El contenedor salió con código 1 y `ERR_MODULE_NOT_FOUND: Cannot find package 'tsx'`. Se arregló moviéndolo a `dependencies`. Esa imagen fallida pesaba 366 MB porque le faltaban `tsx` y `esbuild` (unos 12 MB); las cifras de este informe son todas de la imagen final, que sí arranca (384 MB). Una imagen más pequeña que no arranca no sirve; por eso la comprobación final incluye levantar el stack y escribir en `data/`.
 
 Un segundo ajuste: hadolint avisó `DL3066` (usuario no numérico) con `USER node`. Se corrigió con `USER 1000:1000` y volvió a 0 avisos.
 
 ## Qué no pudimos resolver
 
 - **Número de capas (9 → 9).** El multi-stage no reduce las capas finales: la base `node:24-slim` ya aporta la mayoría y las copias de la aplicación se mantienen en pocas instrucciones.
-- **Tamaño: la mejora es modesta (−11 %).** Casi todo el peso viene de la base Debian y de Node (157 MB + 85 MB). Bajar más exigiría otra base (Alpine, que usa musl, o distroless, sin shell). No se probó por el riesgo con dependencias nativas (`esbuild`, usado por `tsx`).
-- **Dive no mejoró (98,69 % → 98,64 %).** El espacio desperdiciado es de la base (`/var/cache/debconf`, `/var/lib/dpkg`) y no de nuestras capas.
+- **Tamaño: la mejora es modesta (−7 % en disco).** Casi todo el peso viene de la base Debian y de Node (157 MB + 85 MB). Bajar más exigiría otra base (Alpine, que usa musl, o distroless, sin shell). No se probó por el riesgo con dependencias nativas (`esbuild`, usado por `tsx`).
+- **Dive no mejoró (98,69 % → 98,70 %).** El espacio desperdiciado es de la base (`/var/cache/debconf`, `/var/lib/dpkg`) y no de nuestras capas.
 - **CVE que quedan (61 HIGH+CRITICAL):**
   - `zlib1g` CVE-2023-45853 (CRITICAL): Debian lo marca `will_not_fix`; solo se evita cambiando de base.
   - `proxy-addr` 2.0.7 (CRITICAL): ya existe 2.0.8; se arregla **actualizando la dependencia**, no la imagen.

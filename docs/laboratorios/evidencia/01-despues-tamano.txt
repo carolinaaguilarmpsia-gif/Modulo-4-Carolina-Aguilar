@@ -1,2 +1,2 @@
 IMAGE                  ID             DISK USAGE   CONTENT SIZE   EXTRA
-sgai-backend:despues   91e5fc915c58        384MB         89.8MB   U    
+sgai-backend:despues   79cb01ad2151        384MB         89.8MB        

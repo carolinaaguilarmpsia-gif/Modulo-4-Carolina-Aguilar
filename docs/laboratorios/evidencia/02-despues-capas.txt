@@ -1,18 +1,18 @@
-IMAGE          CREATED          CREATED BY                                      SIZE      COMMENT
-91e5fc915c58   10 minutes ago   CMD ["node" "--import" "tsx" "api/server.ts"]   0B        buildkit.dockerfile.v0
-<missing>      10 minutes ago   EXPOSE [3001/tcp]                               0B        buildkit.dockerfile.v0
-<missing>      10 minutes ago   USER 1000:1000                                  0B        buildkit.dockerfile.v0
-<missing>      10 minutes ago   RUN /bin/sh -c chown -R node:node data  && r…   69.6kB    buildkit.dockerfile.v0
-<missing>      10 minutes ago   COPY backend/ ./ # buildkit                     1.05MB    buildkit.dockerfile.v0
-<missing>      43 minutes ago   COPY /app/backend/node_modules ./node_module…   43.4MB    buildkit.dockerfile.v0
-<missing>      50 minutes ago   WORKDIR /app/backend                            12.3kB    buildkit.dockerfile.v0
-<missing>      50 minutes ago   ENV NODE_ENV=production                         0B        buildkit.dockerfile.v0
-<missing>      4 days ago       CMD ["node"]                                    0B        buildkit.dockerfile.v0
-<missing>      4 days ago       ENTRYPOINT ["docker-entrypoint.sh"]             0B        buildkit.dockerfile.v0
-<missing>      4 days ago       COPY docker-entrypoint.sh /usr/local/bin/ # …   20.5kB    buildkit.dockerfile.v0
-<missing>      4 days ago       RUN /bin/sh -c set -ex   && savedAptMark="$(…   7.33MB    buildkit.dockerfile.v0
-<missing>      4 days ago       ENV YARN_VERSION=1.22.22                        0B        buildkit.dockerfile.v0
-<missing>      4 days ago       RUN /bin/sh -c ARCH= OPENSSL_ARCH= && dpkgAr…   157MB     buildkit.dockerfile.v0
-<missing>      4 days ago       ENV NODE_VERSION=24.22.2                        0B        buildkit.dockerfile.v0
-<missing>      4 days ago       RUN /bin/sh -c groupadd --gid 1000 node   &&…   69.6kB    buildkit.dockerfile.v0
-<missing>      6 days ago       # debian.sh --arch 'amd64' out/ 'bookworm' '…   85.3MB    debuerreotype 0.17
+IMAGE          CREATED             CREATED BY                                      SIZE      COMMENT
+79cb01ad2151   20 seconds ago      CMD ["node" "--import" "tsx" "api/server.ts"]   0B        buildkit.dockerfile.v0
+<missing>      20 seconds ago      EXPOSE [3001/tcp]                               0B        buildkit.dockerfile.v0
+<missing>      20 seconds ago      USER 1000:1000                                  0B        buildkit.dockerfile.v0
+<missing>      20 seconds ago      RUN /bin/sh -c chown -R node:node data  && r…   69.6kB    buildkit.dockerfile.v0
+<missing>      22 seconds ago      COPY backend/ ./ # buildkit                     1.01MB    buildkit.dockerfile.v0
+<missing>      About an hour ago   COPY /app/backend/node_modules ./node_module…   43.4MB    buildkit.dockerfile.v0
+<missing>      About an hour ago   WORKDIR /app/backend                            12.3kB    buildkit.dockerfile.v0
+<missing>      About an hour ago   ENV NODE_ENV=production                         0B        buildkit.dockerfile.v0
+<missing>      4 days ago          CMD ["node"]                                    0B        buildkit.dockerfile.v0
+<missing>      4 days ago          ENTRYPOINT ["docker-entrypoint.sh"]             0B        buildkit.dockerfile.v0
+<missing>      4 days ago          COPY docker-entrypoint.sh /usr/local/bin/ # …   20.5kB    buildkit.dockerfile.v0
+<missing>      4 days ago          RUN /bin/sh -c set -ex   && savedAptMark="$(…   7.33MB    buildkit.dockerfile.v0
+<missing>      4 days ago          ENV YARN_VERSION=1.22.22                        0B        buildkit.dockerfile.v0
+<missing>      4 days ago          RUN /bin/sh -c ARCH= OPENSSL_ARCH= && dpkgAr…   157MB     buildkit.dockerfile.v0
+<missing>      4 days ago          ENV NODE_VERSION=24.22.2                        0B        buildkit.dockerfile.v0
+<missing>      4 days ago          RUN /bin/sh -c groupadd --gid 1000 node   &&…   69.6kB    buildkit.dockerfile.v0
+<missing>      6 days ago          # debian.sh --arch 'amd64' out/ 'bookworm' '…   85.3MB    debuerreotype 0.17
