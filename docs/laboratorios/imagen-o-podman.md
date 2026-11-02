@@ -3,6 +3,7 @@
 ## Datos
 
 - **Integrante:** Carolina Aguilar
+- **Fecha:** 1 de noviembre de 2026
 - **Opción y servicio:** A, servicio `api` (backend `sgai-backend`, Node.js/Express con TypeScript ejecutado con `tsx`)
 - **Máquina y versiones:**
   - Sistema: macOS 14.7.1 (23H222), Docker Desktop 4.83.0
@@ -13,16 +14,19 @@
 
 ## Resultados (antes → después)
 
-| Medida | Antes | Después |
-|---|---|---|
-| Tamaño en disco (DISK USAGE) | 412 MB | **384 MB** (−7 %) |
-| Tamaño comprimido (CONTENT SIZE) | 99,5 MB | **89,8 MB** (−10 %) |
-| Número de capas | 9 | 9 |
-| Dive: eficiencia / espacio desperdiciado | 98,69 % / 5,3 MB | 98,70 % / 5,4 MB |
-| Usuario con el que corre | **root** (`uid=0`) | **`1000:1000`** (`uid=1000(node)`) |
-| CVE HIGH + CRITICAL (Trivy) | **100** (66 del sistema Debian + 34 de npm) | **61** (49 Debian + 12 npm) |
-| Avisos de hadolint | 0 | 0 |
-| ¿Arranca y responde? | Sí, `/health` devuelve 200 | Sí, `/health` devuelve 200 |
+Imagen: `sgai-backend:antes` y `sgai-backend:despues` (Dockerfile: `backend/Dockerfile`, contexto de build en la raíz del repositorio, construida con `docker compose build api`).
+
+| Medida | Antes | Después | Comando con el que se midió |
+|---|---:|---:|---|
+| Tamaño en disco (DISK USAGE) | 412 MB | **384 MB** (−7 %) | `docker image ls` |
+| Tamaño comprimido (CONTENT SIZE) | 99,5 MB | **89,8 MB** (−10 %) | `docker image ls` |
+| Número de capas | 9 | 9 | `docker image inspect --format '{{len .RootFS.Layers}}'` y `docker image history` |
+| Eficiencia y espacio desperdiciado (Dive) | 98,69 % / 5,3 MB | 98,70 % / 5,4 MB | `dive` con `CI=true` |
+| Usuario con el que corre | **root** (`uid=0`) | **`1000:1000`** (`uid=1000(node)`) | `docker image inspect --format "{{.Config.User}}"` y `docker run --rm --entrypoint id …` |
+| CVE totales, todas las severidades (Trivy) | 357 (285 Debian + 72 npm) | 256 (223 Debian + 33 npm) | `trivy image --scanners vuln` |
+| CVE HIGH + CRITICAL (Trivy) | **100** (66 Debian + 34 npm) | **61** (49 Debian + 12 npm) | `trivy image --scanners vuln --severity HIGH,CRITICAL` |
+| Avisos de hadolint | 0 | 0 | `hadolint < backend/Dockerfile` |
+| ¿Arranca y responde? | Sí | Sí | `docker compose up -d --wait` y `curl -i http://localhost:3001/health` → 200 con `{"status":"ok","module":"sgai-api"}` |
 
 Desglose de CVE (Trivy, `--scanners vuln`):
 
@@ -58,6 +62,29 @@ Evidencia: `docs/laboratorios/evidencia/` (archivos `01` a `07`, con sufijo `ant
 | `.dockerignore` ampliado (`*.test.ts`, `*.md`, `docs`, `frontend`, `e2e`, `evals`, `aidlc`, …) | `.dockerignore` | Lo que no se ejecuta no entra a la imagen ni al contexto | Contexto de build más chico |
 | `tsx` pasa de `devDependencies` a `dependencies` | `backend/package.json` y `package-lock.json` | `tsx` es lo que ejecuta el TypeScript en producción. Sin esto `--omit=dev` lo descarta | Mismas versiones; el lock solo cambió marcas `dev` |
 | `compose.yaml` nuevo en la raíz, con healthcheck en `node` sobre `/health` | `compose.yaml` | El proyecto no tenía compose; hace falta para seguir la guía (`docker compose build/up --wait`). El healthcheck va aquí, no en la imagen, para no alterar lo medido | `up --wait` espera a que esté sano |
+
+### Diff del Dockerfile (resumen)
+
+```diff
+-FROM node:20-slim
++FROM node:24.22.2-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS deps
+ ...
+-RUN npm ci --include=dev
++RUN npm ci --omit=dev \
++ && npm cache clean --force
++
++FROM node:24.22.2-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c
++ENV NODE_ENV=production
++WORKDIR /app/backend
++COPY --from=deps /app/backend/node_modules ./node_modules
+ COPY backend/ ./
++RUN chown -R node:node data \
++ && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
++           /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
++USER 1000:1000
+```
+
+El diff completo es el del commit `ef22bf4` de esta rama (`git show ef22bf4 -- backend/Dockerfile`); el estado original está en el primer commit de la rama.
 
 ### Un fallo que tuvimos que arreglar
 El primer intento dejó `tsx` fuera: lo añadí con `npm install --no-save --omit=dev tsx`, pero `tsx` estaba en `devDependencies` y `--omit=dev` lo descartó. El contenedor salió con código 1 y `ERR_MODULE_NOT_FOUND: Cannot find package 'tsx'`. Se arregló moviéndolo a `dependencies`. Esa imagen fallida pesaba 366 MB porque le faltaban `tsx` y `esbuild` (unos 12 MB); las cifras de este informe son todas de la imagen final, que sí arranca (384 MB). Una imagen más pequeña que no arranca no sirve; por eso la comprobación final incluye levantar el stack y escribir en `data/`.
