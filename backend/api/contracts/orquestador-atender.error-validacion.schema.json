@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sgai://contracts/orquestador-atender.error-validacion",
+  "title": "POST /api/v1/orquestador/atender — 422 VALIDATION_ERROR",
+  "description": "Forma que arma validateBody() (dj.validator.ts) cuando el body no cumple AtenderOrquestadorSchema (zod).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error", "message", "details", "correlationId"],
+  "properties": {
+    "error": { "const": "VALIDATION_ERROR" },
+    "message": { "type": "string", "minLength": 1 },
+    "details": { "type": "object" },
+    "correlationId": { "type": "string", "minLength": 1 }
+  }
+}

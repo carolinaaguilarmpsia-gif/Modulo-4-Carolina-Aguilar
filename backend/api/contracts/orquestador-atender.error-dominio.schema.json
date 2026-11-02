@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sgai://contracts/orquestador-atender.error-dominio",
+  "title": "POST /api/v1/orquestador/atender — error de dominio (401 / 403 / 404 / ...)",
+  "description": "Forma que arma globalErrorHandler para cualquier DomainError. `error` es el código de negocio (p. ej. TOKEN_INVALID, INSUFFICIENT_ROLE), el código HTTP se valida por fuera del schema (DomainError.httpStatus).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["error", "message", "correlationId"],
+  "properties": {
+    "error": { "type": "string", "minLength": 1 },
+    "message": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 }
+  }
+}

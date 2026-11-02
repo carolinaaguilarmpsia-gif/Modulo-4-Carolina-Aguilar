@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sgai://contracts/orquestador-atender.200",
+  "title": "POST /api/v1/orquestador/atender — 200 OK",
+  "description": "Contrato de forma de la respuesta exitosa. NO valida el contenido de `respuesta` — ese texto lo redacta el modelo/la lógica de negocio y se cubre con las suites de unit/integración, no acá.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conversacionId", "respuesta", "intencion", "nodo", "estadoFlujo", "correlationId"],
+  "properties": {
+    "conversacionId": { "type": "string", "minLength": 1 },
+    "respuesta": { "type": "string", "minLength": 1 },
+    "intencion": {
+      "type": "string",
+      "enum": ["CONSULTA_ESTADO_DJ", "DUDA_NORMATIVA", "REPORTAR_PROBLEMA", "OTRO"]
+    },
+    "nodo": { "type": "string", "minLength": 1 },
+    "estadoFlujo": { "type": "string", "enum": ["ABIERTA", "ESCALADA"] },
+    "correlationId": { "type": "string", "minLength": 1 }
+  }
+}
