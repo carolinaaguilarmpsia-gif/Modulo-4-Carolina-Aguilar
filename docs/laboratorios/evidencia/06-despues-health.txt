@@ -1,0 +1,11 @@
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Vary: Origin
+Content-Type: application/json; charset=utf-8
+Content-Length: 35
+ETag: W/"23-aFMJ/5ONgl0MlbYHrvNabip4/zQ"
+Date: Mon, 02 Nov 2026 02:04:52 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"status":"ok","module":"sgai-api"}

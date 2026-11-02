@@ -1,0 +1,45 @@
+  Using default CI config
+[1mImage Source: [0mdocker://sgai-backend:despues
+[1mExtracting image from docker-engine...[0m (this can take a while for large images)
+[1mAnalyzing image...[0m
+  efficiency: 98.6441 %
+  wastedBytes: 5378612 bytes (5.4 MB)
+  userWastedPercent: 3.1067 %
+[1mInefficient Files:[0m
+Count  Wasted Space  File Path
+    3        2.3 MB  /var/cache/debconf/templates.dat-old
+    3        2.3 MB  /var/cache/debconf/templates.dat
+    3        231 kB  /var/lib/dpkg/status-old
+    3        231 kB  /var/lib/dpkg/status
+    2        112 kB  /var/log/dpkg.log
+    2         54 kB  /app/backend/data/db.json
+    2         47 kB  /var/log/apt/term.log
+    3         38 kB  /var/cache/debconf/config.dat-old
+    3         16 kB  /var/log/apt/eipp.log.xz
+    3         15 kB  /var/lib/apt/extended_states
+    3         14 kB  /etc/ld.so.cache
+    3         13 kB  /var/cache/debconf/config.dat
+    2         10 kB  /var/log/apt/history.log
+    2        9.1 kB  /var/cache/ldconfig/aux-cache
+    2        4.7 kB  /var/log/alternatives.log
+    2        1.7 kB  /etc/passwd
+    2        1.7 kB  /etc/passwd-
+    2         974 B  /etc/shadow
+    2         881 B  /etc/group
+    2         868 B  /etc/group-
+    2         737 B  /etc/gshadow
+    2          18 B  /etc/subgid
+    2          18 B  /etc/subuid
+    3           0 B  /var/lib/dpkg/triggers/Lock
+    3           0 B  /var/lib/dpkg/triggers/Unincorp
+    2           0 B  /usr/local/bin/npm
+    2           0 B  /usr/local/bin/npx
+    2           0 B  /usr/local/bin/yarn
+    2           0 B  /usr/local/bin/yarnpkg
+    3           0 B  /var/lib/dpkg/lock
+[1mResults:[0m
+  PASS: highestUserWastedPercent
+  [34mSKIP[0m: highestWastedBytes: rule disabled
+  PASS: lowestEfficiency
+[32mResult:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1][0m
+
