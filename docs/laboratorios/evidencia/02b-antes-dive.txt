@@ -1,0 +1,53 @@
+Unable to find image 'wagoodman/dive:v0.13.1@sha256:f1886e6c32c094fc41a623c1989f5cb3e48aa766da5f0be233f911fc1d85ce10' locally
+docker.io/wagoodman/dive@sha256:f1886e6c32c094fc41a623c1989f5cb3e48aa766da5f0be233f911fc1d85ce10: Pulling from wagoodman/dive
+738ad4236e29: Pulling fs layer
+f18232174bc9: Pulling fs layer
+c27d2562e825: Pulling fs layer
+f18232174bc9: Download complete
+738ad4236e29: Download complete
+f18232174bc9: Pull complete
+c27d2562e825: Download complete
+c27d2562e825: Pull complete
+738ad4236e29: Pull complete
+Digest: sha256:f1886e6c32c094fc41a623c1989f5cb3e48aa766da5f0be233f911fc1d85ce10
+Status: Downloaded newer image for wagoodman/dive@sha256:f1886e6c32c094fc41a623c1989f5cb3e48aa766da5f0be233f911fc1d85ce10
+  Using default CI config
+[1mImage Source: [0mdocker://sgai-backend:antes
+[1mExtracting image from docker-engine...[0m (this can take a while for large images)
+[1mAnalyzing image...[0m
+  efficiency: 98.6943 %
+  wastedBytes: 5279731 bytes (5.3 MB)
+  userWastedPercent: 2.6595 %
+[1mInefficient Files:[0m
+Count  Wasted Space  File Path
+    3        2.3 MB  /var/cache/debconf/templates.dat-old
+    3        2.3 MB  /var/cache/debconf/templates.dat
+    3        231 kB  /var/lib/dpkg/status-old
+    3        231 kB  /var/lib/dpkg/status
+    2        111 kB  /var/log/dpkg.log
+    2         47 kB  /var/log/apt/term.log
+    3         37 kB  /var/cache/debconf/config.dat-old
+    3         16 kB  /var/log/apt/eipp.log.xz
+    3         15 kB  /var/lib/apt/extended_states
+    3         14 kB  /etc/ld.so.cache
+    3         13 kB  /var/cache/debconf/config.dat
+    2         10 kB  /var/log/apt/history.log
+    2        9.1 kB  /var/cache/ldconfig/aux-cache
+    2        4.7 kB  /var/log/alternatives.log
+    2        1.7 kB  /etc/passwd
+    2        1.7 kB  /etc/passwd-
+    2         974 B  /etc/shadow
+    2         881 B  /etc/group
+    2         868 B  /etc/group-
+    2         737 B  /etc/gshadow
+    2          18 B  /etc/subuid
+    2          18 B  /etc/subgid
+    3           0 B  /var/lib/dpkg/triggers/Lock
+    3           0 B  /var/lib/dpkg/triggers/Unincorp
+    3           0 B  /var/lib/dpkg/lock
+[1mResults:[0m
+  PASS: highestUserWastedPercent
+  [34mSKIP[0m: highestWastedBytes: rule disabled
+  PASS: lowestEfficiency
+[32mResult:PASS [Total:3] [Passed:2] [Failed:0] [Warn:0] [Skipped:1][0m
+
