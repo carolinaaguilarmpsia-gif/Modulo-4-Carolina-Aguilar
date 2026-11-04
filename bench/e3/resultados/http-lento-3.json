@@ -1,0 +1,45 @@
+{
+  "nombre": "http-lento-3",
+  "falla": "lento",
+  "rate_por_ruta": 20,
+  "duracion_s": 70,
+  "calentamiento_s": 10,
+  "ventana_falla_s": [
+    30,
+    50
+  ],
+  "recuperacion_s": 4,
+  "recuperacion_censurada": false,
+  "fases": {
+    "modulo.antes": {
+      "peticiones": 403,
+      "p95_ms": 27.19,
+      "errores_pct": 0
+    },
+    "modulo.durante": {
+      "peticiones": 400,
+      "p95_ms": 2032.7,
+      "errores_pct": 100
+    },
+    "modulo.despues": {
+      "peticiones": 401,
+      "p95_ms": 11.66,
+      "errores_pct": 16.71
+    },
+    "control.antes": {
+      "peticiones": 403,
+      "p95_ms": 9.16,
+      "errores_pct": 0
+    },
+    "control.durante": {
+      "peticiones": 400,
+      "p95_ms": 4.18,
+      "errores_pct": 0
+    },
+    "control.despues": {
+      "peticiones": 400,
+      "p95_ms": 6.99,
+      "errores_pct": 0
+    }
+  }
+}
