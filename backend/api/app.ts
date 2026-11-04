@@ -10,7 +10,6 @@ import { AgenteDJService } from '../domain/agente-dj/services/AgenteDJService.js
 import type { AgentLlmTurn, AgentMessage, AgentToolDef } from '../domain/agente-dj/types/Agente.js';
 import { ConsoleNotificacionPublisher } from '../infrastructure/notifications/ConsoleNotificacionPublisher.js';
 import { InMemoryDeclaracionJuradaRepository } from '../infrastructure/persistence/InMemoryDeclaracionJuradaRepository.js';
-import { InMemoryUsuarioRepository } from '../infrastructure/persistence/InMemoryUsuarioRepository.js';
 import { declaracionesJuradasSemilla } from '../infrastructure/persistence/seedDeclaracionesJuradas.js';
 import { InMemoryAgenteSessionStore } from '../infrastructure/persistence/InMemoryAgenteSessionStore.js';
 import { BcryptPasswordHasher } from '../infrastructure/auth/BcryptPasswordHasher.js';
@@ -23,7 +22,7 @@ import { RetrieverSemanticoTramitesService } from '../domain/tramites-dpa/servic
 import { InProcessMcpToolClientFactory } from '../infrastructure/mcp/InProcessMcpToolClient.js';
 import { OrquestadorAtencionService } from '../domain/orquestador-atencion/services/OrquestadorAtencionService.js';
 import { ClasificarIntencionService } from '../domain/orquestador-atencion/services/ClasificarIntencionService.js';
-import { crearPersistenciaAtencion } from '../infrastructure/config/persistenciaAtencion.js';
+import { crearPersistencia } from '../infrastructure/config/persistencia.js';
 import { ConsoleEscalamientoPublisher } from '../infrastructure/notifications/ConsoleEscalamientoPublisher.js';
 import { loadEnvFile } from '../infrastructure/config/loadEnv.js';
 import { AsistenteController } from './controllers/asistente.controller.js';
@@ -44,8 +43,6 @@ import { leerCorsOrigins } from '../infrastructure/config/corsOrigins.js';
 import { AsignarRolInstitucionalService } from '../domain/gestion-docente/services/AsignarRolInstitucionalService.js';
 import { GestionarPerfilDocenteService } from '../domain/gestion-docente/services/GestionarPerfilDocenteService.js';
 import { GestionarCalendarioService } from '../domain/gestion-academica/services/GestionarCalendarioService.js';
-import { InMemoryRolInstitucionalRepository } from '../infrastructure/persistence/InMemoryRolInstitucionalRepository.js';
-import { InMemoryPerfilDocenteRepository } from '../infrastructure/persistence/InMemoryPerfilDocenteRepository.js';
 import { InMemoryCalendarioRepository } from '../infrastructure/persistence/InMemoryCalendarioRepository.js';
 import { AdminDocentesController } from './controllers/adminDocentes.controller.js';
 import { PerfilDocenteController } from './controllers/perfilDocente.controller.js';
@@ -68,7 +65,10 @@ const controller = new DjController(service);
 // Sin JWT_SECRET en .env, se genera uno efímero por proceso (válido solo para esta demo local).
 const jwtSecret = resolverJwtSecret();
 
-const usuarioRepository = new InMemoryUsuarioRepository();
+// Usuarios, perfiles, roles institucionales, trámites y conversaciones viven en PostgreSQL cuando
+// hay DATABASE_URL (ver persistencia.ts). Declaraciones juradas y calendario siguen en memoria.
+const persistencia = await crearPersistencia(resolve(__dirname, '..'));
+const usuarioRepository = persistencia.usuarios;
 const jwtSigner = new JwtSigner(jwtSecret);
 const authService = new AutenticarUsuarioService(
   usuarioRepository,
@@ -97,8 +97,6 @@ const asistenteController = new AsistenteController(
 // llega a instanciar/llamar al LLM (ni falla si no hay GROQ_API_KEY): el camino keyword
 // sigue respondiendo igual, solo cambia si el fallback puede resolver preguntas por sinónimo.
 const iaTramitesHabilitada = process.env.IA_HABILITADA !== 'false';
-// Trámites y conversaciones viven en PostgreSQL cuando hay DATABASE_URL (ver persistenciaAtencion.ts).
-const persistencia = await crearPersistenciaAtencion(resolve(__dirname, '..'));
 const tramiteRepository = persistencia.tramites;
 // RAG (Nivel 3): embeddings locales vía Ollama — igual que retrieverSemantico, degrada solo si
 // Ollama no responde (AsistenteTramitesService.preguntar hace .catch(() => null) sobre esto), así
@@ -163,12 +161,12 @@ app.use('/api/v1/asistente-tramites', createAsistenteTramitesRouter(asistenteTra
 app.use('/api/v1/agente-dj', createAgenteDjRouter(agenteDjController, jwtSigner, usuarioRepository));
 app.use('/api/v1/orquestador', createOrquestadorRouter(orquestadorController, jwtSigner, usuarioRepository));
 
-// FSD-UC-009 / UC-006 / UC-008 — gestión docente y calendario (in-memory, como el resto de repos).
+// FSD-UC-009 / UC-006 / UC-008 — gestión docente y calendario (calendario aún en memoria).
 const adminDocentesController = new AdminDocentesController(
-  new AsignarRolInstitucionalService(usuarioRepository, new InMemoryRolInstitucionalRepository())
+  new AsignarRolInstitucionalService(usuarioRepository, persistencia.rolesInstitucionales)
 );
 const perfilDocenteController = new PerfilDocenteController(
-  new GestionarPerfilDocenteService(new InMemoryPerfilDocenteRepository())
+  new GestionarPerfilDocenteService(persistencia.perfiles)
 );
 const calendarioController = new CalendarioController(
   new GestionarCalendarioService(new InMemoryCalendarioRepository())
