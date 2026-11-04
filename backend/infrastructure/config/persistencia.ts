@@ -20,7 +20,8 @@ export interface Persistencia {
   usuarios: IUsuarioRepository;
   perfiles: IPerfilDocenteRepository;
   rolesInstitucionales: IRolInstitucionalRepository;
-  tramites: ITramiteRepository;
+  /** null con TRAMITES_MODO=http: el catálogo es del módulo extraído y el monolito ya no lo lee. */
+  tramites: ITramiteRepository | null;
   conversaciones: IConversacionRepository;
   motor: 'postgres' | 'memoria-y-archivos';
 }
@@ -38,7 +39,7 @@ export async function crearPersistencia(dirBackend: string, env: NodeJS.ProcessE
       usuarios: new PgUsuarioRepository(pool),
       perfiles: new PgPerfilDocenteRepository(pool),
       rolesInstitucionales: new PgRolInstitucionalRepository(pool),
-      tramites: await PgTramiteRepository.cargar(pool),
+      tramites: env.TRAMITES_MODO === 'http' ? null : await PgTramiteRepository.cargar(pool),
       conversaciones: new PgConversacionRepository(pool),
       motor: 'postgres',
     };
@@ -51,7 +52,7 @@ export async function crearPersistencia(dirBackend: string, env: NodeJS.ProcessE
     usuarios: new InMemoryUsuarioRepository(),
     perfiles: new InMemoryPerfilDocenteRepository(),
     rolesInstitucionales: new InMemoryRolInstitucionalRepository(),
-    tramites: new JsonTramiteRepository(resolve(dirBackend, 'data/db.json')),
+    tramites: env.TRAMITES_MODO === 'http' ? null : new JsonTramiteRepository(resolve(dirBackend, 'data/db.json')),
     conversaciones: new JsonConversacionRepository(resolve(dirBackend, 'data/conversaciones.json')),
     motor: 'memoria-y-archivos',
   };

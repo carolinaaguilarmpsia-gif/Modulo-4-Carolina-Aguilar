@@ -23,6 +23,8 @@ module.exports = {
     // Auditoría M8 — config por entorno y timeout de clientes de IA.
     '**/backend/infrastructure/config/**/*.test.ts',
     '**/backend/infrastructure/ai/**/*.test.ts',
+    // E3 — cliente HTTP de la frontera de Trámites DPA.
+    '**/backend/infrastructure/tramites/**/*.test.ts',
     // Actividad 3, paso 6 — contrato del endpoint principal (JSON Schema + supertest).
     '**/backend/api/**/*.test.ts',
   ],

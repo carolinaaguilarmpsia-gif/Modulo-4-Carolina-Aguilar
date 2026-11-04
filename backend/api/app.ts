@@ -5,7 +5,6 @@ import cors from 'cors';
 import { DeclaracionJuradaService } from '../domain/declaracion-jurada/services/DeclaracionJuradaService.js';
 import { AutenticarUsuarioService } from '../domain/administracion/services/AutenticarUsuarioService.js';
 import { ResponderConsultaDJService } from '../domain/asistente-ia/services/ResponderConsultaDJService.js';
-import { AsistenteTramitesService } from '../domain/tramites-dpa/services/AsistenteTramitesService.js';
 import { AgenteDJService } from '../domain/agente-dj/services/AgenteDJService.js';
 import type { AgentLlmTurn, AgentMessage, AgentToolDef } from '../domain/agente-dj/types/Agente.js';
 import { ConsoleNotificacionPublisher } from '../infrastructure/notifications/ConsoleNotificacionPublisher.js';
@@ -18,10 +17,10 @@ import { LdapUnavailableAuthenticator } from '../infrastructure/auth/LdapUnavail
 import { GroqClient } from '../infrastructure/ai/GroqClient.js';
 import { GroqAgentClient } from '../infrastructure/ai/GroqAgentClient.js';
 import { OllamaEmbeddingsClient } from '../infrastructure/ai/OllamaEmbeddingsClient.js';
-import { RetrieverSemanticoTramitesService } from '../domain/tramites-dpa/services/RetrieverSemanticoTramitesService.js';
 import { InProcessMcpToolClientFactory } from '../infrastructure/mcp/InProcessMcpToolClient.js';
 import { OrquestadorAtencionService } from '../domain/orquestador-atencion/services/OrquestadorAtencionService.js';
 import { ClasificarIntencionService } from '../domain/orquestador-atencion/services/ClasificarIntencionService.js';
+import { crearAsistenteTramites } from '../infrastructure/tramites/crearAsistenteTramites.js';
 import { crearPersistencia } from '../infrastructure/config/persistencia.js';
 import { ConsoleEscalamientoPublisher } from '../infrastructure/notifications/ConsoleEscalamientoPublisher.js';
 import { loadEnvFile } from '../infrastructure/config/loadEnv.js';
@@ -97,19 +96,9 @@ const asistenteController = new AsistenteController(
 // llega a instanciar/llamar al LLM (ni falla si no hay GROQ_API_KEY): el camino keyword
 // sigue respondiendo igual, solo cambia si el fallback puede resolver preguntas por sinónimo.
 const iaTramitesHabilitada = process.env.IA_HABILITADA !== 'false';
-const tramiteRepository = persistencia.tramites;
-// RAG (Nivel 3): embeddings locales vía Ollama — igual que retrieverSemantico, degrada solo si
-// Ollama no responde (AsistenteTramitesService.preguntar hace .catch(() => null) sobre esto), así
-// que instanciarlo eager acá no puede tumbar el boot del server.
-const retrieverSemanticoTramites = iaTramitesHabilitada
-  ? new RetrieverSemanticoTramitesService(new OllamaEmbeddingsClient(), tramiteRepository.listarTodos())
-  : null;
-const asistenteTramitesService = new AsistenteTramitesService(
-  tramiteRepository,
-  iaTramitesHabilitada ? new LazyGroqClient() : null,
-  iaTramitesHabilitada,
-  retrieverSemanticoTramites
-);
+// Frontera del módulo Trámites DPA (E3): TRAMITES_MODO=proceso (default) lo corre aquí dentro;
+// TRAMITES_MODO=http le habla a otro proceso (main-tramites.ts) en TRAMITES_URL.
+const asistenteTramitesService = crearAsistenteTramites(persistencia.tramites);
 const asistenteTramitesController = new AsistenteTramitesController(asistenteTramitesService);
 
 /** Mismo patrón lazy que LazyGroqClient — no falla el boot si falta GROQ_API_KEY. */
