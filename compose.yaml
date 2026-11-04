@@ -1,17 +1,72 @@
+# Stack de producción de SGAI: PostgreSQL + migración + API. Desde un clon limpio, sin configurar nada:
+#
+#   docker compose up -d --wait        construye la imagen, migra la base y deja la API en http://127.0.0.1:3001
+#   docker compose down                apaga (los datos quedan en el volumen)
+#   docker compose down -v             apaga y borra la base
+#
+# Para algo real, copia .env.example a .env y cambia JWT_SECRET y POSTGRES_PASSWORD: los valores por
+# defecto de abajo son solo para la demo local y NO deben usarse fuera de ella.
+name: sgai
+
+x-entorno-api: &entorno-api
+  NODE_ENV: production # exige JWT_SECRET y DATABASE_URL: sin ellos el servidor no arranca
+  JWT_SECRET: ${JWT_SECRET:-secreto-solo-para-demo-cambialo}
+  DATABASE_URL: postgres://sgai:${POSTGRES_PASSWORD:-sgai}@db:5432/sgai
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+  IA_HABILITADA: ${IA_HABILITADA:-false} # con true y GROQ_API_KEY el asistente usa el modelo; con false, solo palabras clave
+
 services:
-  api:
+  db:
+    image: postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
+    environment:
+      POSTGRES_USER: sgai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sgai}
+      POSTGRES_DB: sgai
+    volumes:
+      - sgai-pgdata:/var/lib/postgresql/data
+    # Sin "ports": la base solo se ve desde la red interna del stack, no desde la máquina.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgai -d sgai"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrar:
+    # Se ejecuta una vez y termina: aplica el esquema y siembra el catálogo. La API espera a que acabe bien.
     build:
       context: .
       dockerfile: backend/Dockerfile
     image: sgai-backend:latest
-    ports:
-      - "3001:3001"
+    # Siempre construye (con caché de capas): sin esto, una imagen vieja con la misma etiqueta se reutilizaría.
+    pull_policy: build
+    command: ["node", "--import", "tsx", "scripts/db-setup.ts"]
     environment:
-      JWT_SECRET: ${JWT_SECRET:-secreto-de-prueba-lab}
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      <<: *entorno-api
+      # Producción no siembra cuentas de ejemplo salvo que se pida. La demo lo pide aquí
+      # (usuarios y DJ de ejemplo, clave Demo1234!). Pon SGAI_SEED_DEMO=false para un despliegue real.
+      SGAI_SEED_DEMO: ${SGAI_SEED_DEMO:-true}
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: sgai-backend:latest
+    command: ["node", "--import", "tsx", "api/server.ts"]
+    environment:
+      <<: *entorno-api
+      PORT: "3001"
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      migrar: { condition: service_completed_successfully }
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 5s
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 3s
       timeout: 3s
-      retries: 10
+      retries: 20
       start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  sgai-pgdata:

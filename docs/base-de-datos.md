@@ -11,6 +11,10 @@ npm run db:setup --prefix backend            # migra el esquema, siembra 34 trá
 
 En `backend/.env` debe estar `DATABASE_URL=postgres://sgai:sgai@localhost:5432/sgai` (ver `backend/.env.example`).
 
+## El stack completo (producción y demo)
+
+`compose.yaml` levanta PostgreSQL, aplica las migraciones (servicio `migrar`) y arranca la API, todo con `docker compose up -d --wait`. La base no publica puertos. En producción no se siembran usuarios ni DJ de ejemplo salvo `SGAI_SEED_DEMO=true`, que el compose de la demo activa por defecto. Variables en `.env.example`. `compose.db.yaml` sigue siendo solo la base, para desarrollo con la API en tu máquina.
+
 ## Qué hay
 
 | Tabla | Contenido |

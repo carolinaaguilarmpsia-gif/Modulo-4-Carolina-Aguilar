@@ -27,9 +27,13 @@ try {
   console.info(aplicadas.length ? `Migraciones aplicadas: ${aplicadas.join(', ')}` : 'Esquema al día.');
   const r = await sembrarTramites(pool, resolve(dirBackend, 'data/db.json'));
   console.info(`Catálogo sembrado: ${r.tramites} trámites en ${r.departamentos} departamentos.`);
-  if (process.env.NODE_ENV === 'production') {
-    console.info('Producción: no se siembran usuarios demo.');
+  // En producción no se siembran cuentas de ejemplo (clave conocida) salvo que se pida con SGAI_SEED_DEMO=true,
+  // que es lo que hace el compose de la demo. Fuera de producción se siembran siempre.
+  const sembrarDemo = process.env.NODE_ENV !== 'production' || process.env.SGAI_SEED_DEMO === 'true';
+  if (!sembrarDemo) {
+    console.info('Producción: no se siembran usuarios ni DJ demo (SGAI_SEED_DEMO=true los activa).');
   } else {
+    if (process.env.NODE_ENV === 'production') console.warn('SGAI_SEED_DEMO=true en producción: se crean cuentas con clave conocida. Solo para demos.');
     const u = await sembrarUsuariosDemo(pool);
     console.info(`Usuarios demo sembrados: ${u.usuarios} usuarios en ${u.facultades} facultades.`);
     const d = await sembrarDeclaracionesDemo(pool);
