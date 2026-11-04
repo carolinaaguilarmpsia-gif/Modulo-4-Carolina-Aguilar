@@ -9,8 +9,6 @@ import { AsistenteTramitesService } from '../domain/tramites-dpa/services/Asiste
 import { AgenteDJService } from '../domain/agente-dj/services/AgenteDJService.js';
 import type { AgentLlmTurn, AgentMessage, AgentToolDef } from '../domain/agente-dj/types/Agente.js';
 import { ConsoleNotificacionPublisher } from '../infrastructure/notifications/ConsoleNotificacionPublisher.js';
-import { InMemoryDeclaracionJuradaRepository } from '../infrastructure/persistence/InMemoryDeclaracionJuradaRepository.js';
-import { declaracionesJuradasSemilla } from '../infrastructure/persistence/seedDeclaracionesJuradas.js';
 import { InMemoryAgenteSessionStore } from '../infrastructure/persistence/InMemoryAgenteSessionStore.js';
 import { BcryptPasswordHasher } from '../infrastructure/auth/BcryptPasswordHasher.js';
 import { JwtSigner } from '../infrastructure/auth/JwtSigner.js';
@@ -43,7 +41,6 @@ import { leerCorsOrigins } from '../infrastructure/config/corsOrigins.js';
 import { AsignarRolInstitucionalService } from '../domain/gestion-docente/services/AsignarRolInstitucionalService.js';
 import { GestionarPerfilDocenteService } from '../domain/gestion-docente/services/GestionarPerfilDocenteService.js';
 import { GestionarCalendarioService } from '../domain/gestion-academica/services/GestionarCalendarioService.js';
-import { InMemoryCalendarioRepository } from '../infrastructure/persistence/InMemoryCalendarioRepository.js';
 import { AdminDocentesController } from './controllers/adminDocentes.controller.js';
 import { PerfilDocenteController } from './controllers/perfilDocente.controller.js';
 import { CalendarioController } from './controllers/calendario.controller.js';
@@ -57,17 +54,16 @@ import { createCalendarioRouter } from './routes/calendario.routes.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 loadEnvFile(resolve(__dirname, '../.env'));
 
-const repository = new InMemoryDeclaracionJuradaRepository(declaracionesJuradasSemilla());
-const service = new DeclaracionJuradaService(repository, new ConsoleNotificacionPublisher());
-const controller = new DjController(service);
-
 // @see docs/SKILLS/auth-rbac-guard.md — MUST NOT hardcodear secretos.
 // Sin JWT_SECRET en .env, se genera uno efímero por proceso (válido solo para esta demo local).
 const jwtSecret = resolverJwtSecret();
 
-// Usuarios, perfiles, roles institucionales, trámites y conversaciones viven en PostgreSQL cuando
-// hay DATABASE_URL (ver persistencia.ts). Declaraciones juradas y calendario siguen en memoria.
+// Todo lo persistente (usuarios, perfiles, roles, trámites, conversaciones, declaraciones juradas y
+// calendario) vive en PostgreSQL cuando hay DATABASE_URL (ver persistencia.ts).
 const persistencia = await crearPersistencia(resolve(__dirname, '..'));
+const repository = persistencia.declaraciones;
+const service = new DeclaracionJuradaService(repository, new ConsoleNotificacionPublisher());
+const controller = new DjController(service);
 const usuarioRepository = persistencia.usuarios;
 const jwtSigner = new JwtSigner(jwtSecret);
 const authService = new AutenticarUsuarioService(
@@ -169,7 +165,7 @@ const perfilDocenteController = new PerfilDocenteController(
   new GestionarPerfilDocenteService(persistencia.perfiles)
 );
 const calendarioController = new CalendarioController(
-  new GestionarCalendarioService(new InMemoryCalendarioRepository())
+  new GestionarCalendarioService(persistencia.calendarios)
 );
 app.use('/api/v1/admin/docentes', createAdminDocentesRouter(adminDocentesController, jwtSigner, usuarioRepository));
 app.use('/api/v1/perfil-docente', createPerfilDocenteRouter(perfilDocenteController, jwtSigner, usuarioRepository));

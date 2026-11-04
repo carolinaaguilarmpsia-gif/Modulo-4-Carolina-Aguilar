@@ -1,12 +1,12 @@
 # Base de datos
 
-Viven en **PostgreSQL 17**: usuarios, docentes (su perfil y formación académica), roles institucionales con su auditoría, trámites de la DPA y conversaciones del orquestador. `backend/data/db.json` queda solo como **semilla** del catálogo de trámites; `conversaciones.json` ya no se usa cuando hay base.
+Viven en **PostgreSQL 17**: usuarios, docentes (su perfil y formación académica), roles institucionales con su auditoría, declaraciones juradas con su historial, calendario académico, trámites de la DPA y conversaciones del orquestador. `backend/data/db.json` queda solo como **semilla** del catálogo de trámites; `conversaciones.json` ya no se usa cuando hay base.
 
 ## Levantarla
 
 ```bash
 docker compose -f compose.db.yaml up -d      # PostgreSQL en 127.0.0.1:5432 (usuario, clave y base: sgai)
-npm run db:setup --prefix backend            # migra el esquema, siembra 34 trámites y (fuera de producción) 10 usuarios demo; se puede repetir
+npm run db:setup --prefix backend            # migra el esquema, siembra 34 trámites y (fuera de producción) 10 usuarios y 5 declaraciones juradas demo; se puede repetir
 ```
 
 En `backend/.env` debe estar `DATABASE_URL=postgres://sgai:sgai@localhost:5432/sgai` (ver `backend/.env.example`).
@@ -20,6 +20,9 @@ En `backend/.env` debe estar `DATABASE_URL=postgres://sgai:sgai@localhost:5432/s
 | `perfiles_docente` | CV del docente: `formacion_academica`, `publicaciones` y `experiencia_docente` como listas `jsonb`, más `updated_at` |
 | `roles_institucionales` | a lo más un rol vigente por docente (`AUTORIDAD`, `INVESTIGADOR`, `ADMINISTRATIVO`) |
 | `auditoria_roles_institucionales` | una fila por cada asignación, cambio o revocación, con el rol anterior y quién lo hizo (RB-06) |
+| `declaraciones_juradas` | cada DJ con su docente, facultad, estado (`CHECK` con los 6 estados) y `campos_formulario` en `jsonb` |
+| `historial_dj` | una fila por cada cambio de estado, con quién lo hizo y las observaciones (RB-06) |
+| `calendarios_academicos` | un calendario por período y ámbito (`INSTITUCIONAL` o el id de la facultad); `eventos` en `jsonb` |
 | `tramites_departamentos` | 5 departamentos, con su `orden` |
 | `tramites` | 34 trámites; `requisitos` y `requisitos_detallados` en `jsonb` |
 | `conversaciones` | estado del orquestador; `historial` en `jsonb` |
@@ -29,9 +32,11 @@ Decisiones:
 
 - La formación académica, las publicaciones y la experiencia se guardan como `jsonb` porque la API las trata como listas libres. Normalizarlas en filas exige definir antes sus campos.
 - El cambio de rol institucional y su auditoría se escriben en **una sola transacción**, con un candado por docente, así que dos cambios simultáneos no pierden el rol anterior.
-- `db:setup` no siembra usuarios demo si `NODE_ENV=production`: son cuentas con clave conocida.
+- El cambio de estado de una DJ y su fila de historial también van en **una sola transacción**, con `SELECT ... FOR UPDATE` sobre la DJ: si dos revisores actúan a la vez, solo uno gana y el otro recibe `PERSISTENCE_ERROR`.
+- El calendario se reemplaza completo en cada guardado (`UPSERT` por período y ámbito), igual que el contrato del puerto.
+- `db:setup` no siembra usuarios ni DJ demo si `NODE_ENV=production`: son cuentas y datos de ejemplo. Sembrar de nuevo no pisa una DJ que ya cambió de estado.
 
-Las migraciones están en `backend/infrastructure/persistence/postgres/migrations/` (`001` trámites y conversaciones, `002` usuarios, perfiles y roles); para un cambio de esquema se agrega un `003_...sql`.
+Las migraciones están en `backend/infrastructure/persistence/postgres/migrations/` (`001` trámites y conversaciones, `002` usuarios, perfiles y roles, `003` declaraciones juradas y calendario); para un cambio de esquema se agrega un `004_...sql`.
 
 ## Cómo elige el servidor
 
@@ -52,5 +57,5 @@ Si corres **toda** la suite con `DATABASE_URL` definida, hazlo en serie (`--runI
 ## Límites conocidos
 
 - El catálogo de trámites se lee una vez al arrancar (el puerto `ITramiteRepository` es síncrono). Un cambio en la tabla se ve al reiniciar.
-- Siguen en memoria: declaraciones juradas, calendario académico y las sesiones del agente. Se reinician con el servidor.
+- Sigue en memoria solo las sesiones del agente (`InMemoryAgenteSessionStore`). Se reinician con el servidor.
 - El campo `fuenteDatos` de las respuestas del asistente sigue diciendo `"db.json"`: cambiarlo modifica el contrato OpenAPI.

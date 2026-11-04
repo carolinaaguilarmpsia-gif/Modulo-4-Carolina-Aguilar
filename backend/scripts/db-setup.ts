@@ -1,6 +1,6 @@
 /**
  * Prepara la base: aplica las migraciones, siembra el catálogo de trámites (backend/data/db.json) y,
- * fuera de producción, las facultades y usuarios demo.
+ * fuera de producción, las facultades, usuarios y declaraciones juradas demo.
  * Uso: DATABASE_URL=postgres://... npm run db:setup --prefix backend   (es idempotente)
  */
 import { dirname, resolve } from 'node:path';
@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvFile } from '../infrastructure/config/loadEnv.js';
 import { migrar } from '../infrastructure/persistence/postgres/migrar.js';
 import { crearPool } from '../infrastructure/persistence/postgres/pool.js';
+import { sembrarDeclaracionesDemo } from '../infrastructure/persistence/postgres/sembrarDeclaraciones.js';
 import { sembrarTramites } from '../infrastructure/persistence/postgres/sembrarTramites.js';
 import { sembrarUsuariosDemo } from '../infrastructure/persistence/postgres/sembrarUsuarios.js';
 
@@ -31,6 +32,8 @@ try {
   } else {
     const u = await sembrarUsuariosDemo(pool);
     console.info(`Usuarios demo sembrados: ${u.usuarios} usuarios en ${u.facultades} facultades.`);
+    const d = await sembrarDeclaracionesDemo(pool);
+    console.info(`Declaraciones juradas demo sembradas: ${d.declaraciones}.`);
   }
 } finally {
   await pool.end();
