@@ -6,9 +6,9 @@
 |-------|-------|
 | Número | 0007 |
 | Título | Trámites DPA: monolito modular frente a servicio extraído |
-| Fecha | 04/11/2026 |
+| Fecha | 03/11/2026 |
 | Autor(es) | Carolina Aguilar (G01) |
-| Estado | **Propuesta** — pendiente de confirmación del grupo; pasa a Aceptada al confirmarla |
+| Estado | **Aceptada** (03/11/2026) — decisión: no extraer por ahora |
 | Relacionado | ADR-0001 (monolito hexagonal), ADR-0004 (Docker Compose on-premise), `bench/e3/INFORME.md` |
 
 ### 1. Contexto
