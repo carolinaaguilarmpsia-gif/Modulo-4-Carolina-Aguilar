@@ -17,6 +17,7 @@ import { AsistenteTramitesSchema } from '../validators/asistenteTramites.validat
 import { AtenderOrquestadorSchema } from '../validators/orquestador.validator.js';
 import { ConfirmarAgenteDjSchema, PreguntarAgenteDjSchema } from '../validators/agenteDj.validator.js';
 import { ConsultarCalendarioQuerySchema, PublicarCalendarioSchema } from '../validators/calendario.validator.js';
+import { ListarBoletasQuerySchema } from '../validators/boletaPago.validator.js';
 import { ActualizarPerfilSchema, AsignarRolSchema } from '../validators/gestionDocente.validator.js';
 
 extendZodWithOpenApi(z);
@@ -412,6 +413,50 @@ declarar({
   errores: [403],
 });
 
+// ── Boletas de pago (FSD-UC-005 · UC-L-03) ───────────────────────────────────────────────────
+const BoletaResumen = registry.register(
+  'BoletaPagoResumen',
+  z.object({
+    id: z.string(),
+    periodo: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).openapi({ example: '2026-10' }),
+    haber: z.number(),
+    totalDescuentos: z.number(),
+    neto: z.number().describe('haber menos totalDescuentos.'),
+  })
+);
+const BoletaDetalle = registry.register(
+  'BoletaPagoDetalle',
+  BoletaResumen.extend({
+    descuentos: z.array(z.object({ concepto: z.string(), monto: z.number() })),
+    sincronizadaEn: z.string().datetime().describe('Cuándo se copió la boleta desde nómina.'),
+  })
+);
+declarar({
+  operationId: 'listarBoletasPago',
+  method: 'get',
+  path: '/boletas-pago',
+  tag: 'Boletas de pago',
+  summary: 'Listar mis boletas de pago',
+  description: 'Solo el DOCENTE, y solo ve las suyas (el docente sale del token). La más reciente primero. Con periodo (AAAA-MM) devuelve solo la de ese mes.',
+  uc: 'FSD-UC-005',
+  query: ListarBoletasQuerySchema,
+  ok: { status: 200, descripcion: 'Boletas del docente.', schema: z.object({ boletas: z.array(BoletaResumen), correlationId }) },
+  errores: [403, 422],
+});
+declarar({
+  operationId: 'obtenerBoletaPago',
+  method: 'get',
+  path: '/boletas-pago/{id}',
+  tag: 'Boletas de pago',
+  summary: 'Ver el detalle de una boleta de pago',
+  description:
+    'Haber, descuentos y neto. Si la boleta es de otro docente responde 403 UNAUTHORIZED_DATA_ACCESS (RB-04); si no existe, 404 BOLETA_NOT_FOUND.',
+  uc: 'FSD-UC-005',
+  params: z.object({ id: z.string() }),
+  ok: { status: 200, descripcion: 'Detalle de la boleta.', schema: z.object({ boleta: BoletaDetalle, correlationId }) },
+  errores: [403, 404],
+});
+
 // ── Asistentes de IA ─────────────────────────────────────────────────────────────────────────
 declarar({
   operationId: 'validarDeclaracionConModelo',
@@ -535,6 +580,7 @@ export function construirDocumentoOpenApi() {
       { name: 'Declaraciones juradas', description: 'Ciclo de la declaración jurada.' },
       { name: 'Gestión docente', description: 'Roles institucionales y perfil del docente.' },
       { name: 'Calendario académico', description: 'Publicación y consulta del calendario.' },
+      { name: 'Boletas de pago', description: 'Consulta de las boletas de pago por el docente titular.' },
       { name: 'Asistentes de IA', description: 'Asistente de trámites, agente MCP y orquestador.' },
     ],
     security: [{ bearerAuth: [] }],

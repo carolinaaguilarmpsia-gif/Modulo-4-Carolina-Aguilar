@@ -2,6 +2,10 @@ import { resolve } from 'node:path';
 import type { IUsuarioRepository } from '../../domain/administracion/ports/out/IUsuarioRepository.js';
 import type { IDeclaracionJuradaRepository } from '../../domain/declaracion-jurada/ports/out/IDeclaracionJuradaRepository.js';
 import type { ICalendarioRepository } from '../../domain/gestion-academica/ports/out/ICalendarioRepository.js';
+import type { IBoletaPagoRepository } from '../../domain/boletas-pago/ports/out/IBoletaPagoRepository.js';
+import { InMemoryBoletaPagoRepository } from '../persistence/InMemoryBoletaPagoRepository.js';
+import { PgBoletaPagoRepository } from '../persistence/PgBoletaPagoRepository.js';
+import { boletasPagoSemilla } from '../persistence/seedBoletasPago.js';
 import type { IPerfilDocenteRepository } from '../../domain/gestion-docente/ports/out/IPerfilDocenteRepository.js';
 import type { IRolInstitucionalRepository } from '../../domain/gestion-docente/ports/out/IRolInstitucionalRepository.js';
 import type { ITramiteRepository } from '../../domain/tramites-dpa/ports/out/ITramiteRepository.js';
@@ -32,6 +36,7 @@ export interface Persistencia {
   conversaciones: IConversacionRepository;
   declaraciones: IDeclaracionJuradaRepository;
   calendarios: ICalendarioRepository;
+  boletas: IBoletaPagoRepository;
   motor: 'postgres' | 'memoria-y-archivos';
 }
 
@@ -52,6 +57,7 @@ export async function crearPersistencia(dirBackend: string, env: NodeJS.ProcessE
       conversaciones: new PgConversacionRepository(pool),
       declaraciones: new PgDeclaracionJuradaRepository(pool),
       calendarios: new PgCalendarioRepository(pool),
+      boletas: new PgBoletaPagoRepository(pool),
       motor: 'postgres',
     };
   }
@@ -67,6 +73,7 @@ export async function crearPersistencia(dirBackend: string, env: NodeJS.ProcessE
     conversaciones: new JsonConversacionRepository(resolve(dirBackend, 'data/conversaciones.json')),
     declaraciones: new InMemoryDeclaracionJuradaRepository(declaracionesJuradasSemilla()),
     calendarios: new InMemoryCalendarioRepository(),
+    boletas: new InMemoryBoletaPagoRepository(boletasPagoSemilla()),
     motor: 'memoria-y-archivos',
   };
 }

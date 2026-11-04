@@ -31,6 +31,8 @@ export const USER_MESSAGES_ES_BO = {
   UNAUTHORIZED_DATA_ACCESS: 'No tiene permiso para acceder a los datos de otro docente.',
   DOCENTE_ID_REQUIRED: 'Debe indicar el docente cuyo perfil desea consultar.',
   INVALID_DATE_RANGE: 'La fecha de fin no puede ser anterior a la fecha de inicio.',
+  // @see FSD-UC-005 — boletas de pago
+  BOLETA_NOT_FOUND: 'La boleta de pago solicitada no fue encontrada.',
 } as const;
 
 export type DomainErrorCode = keyof typeof USER_MESSAGES_ES_BO;

@@ -46,6 +46,9 @@ import { CalendarioController } from './controllers/calendario.controller.js';
 import { createAdminDocentesRouter } from './routes/adminDocentes.routes.js';
 import { createPerfilDocenteRouter } from './routes/perfilDocente.routes.js';
 import { createCalendarioRouter } from './routes/calendario.routes.js';
+import { ConsultarBoletasService } from '../domain/boletas-pago/services/ConsultarBoletasService.js';
+import { BoletaPagoController } from './controllers/boletaPago.controller.js';
+import { createBoletaPagoRouter } from './routes/boletaPago.routes.js';
 
 // Ruta absoluta relativa a este archivo (backend/api/app.ts), no a process.cwd() —
 // el server se invoca a veces desde la raíz del repo, a veces desde backend/, y
@@ -159,6 +162,10 @@ const calendarioController = new CalendarioController(
 app.use('/api/v1/admin/docentes', createAdminDocentesRouter(adminDocentesController, jwtSigner, usuarioRepository));
 app.use('/api/v1/perfil-docente', createPerfilDocenteRouter(perfilDocenteController, jwtSigner, usuarioRepository));
 app.use('/api/v1/calendario-academico', createCalendarioRouter(calendarioController, jwtSigner, usuarioRepository));
+
+// FSD-UC-005 — boletas de pago: el docente consulta solo las suyas.
+const boletaPagoController = new BoletaPagoController(new ConsultarBoletasService(persistencia.boletas));
+app.use('/api/v1/boletas-pago', createBoletaPagoRouter(boletaPagoController, jwtSigner, usuarioRepository));
 
 // Ruta inexistente: JSON con correlationId, no la página HTML por defecto de Express.
 app.use((req, res) => {

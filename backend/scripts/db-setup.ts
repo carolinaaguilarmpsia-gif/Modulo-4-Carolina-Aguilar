@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnvFile } from '../infrastructure/config/loadEnv.js';
 import { migrar } from '../infrastructure/persistence/postgres/migrar.js';
 import { crearPool } from '../infrastructure/persistence/postgres/pool.js';
+import { sembrarBoletasDemo } from '../infrastructure/persistence/postgres/sembrarBoletas.js';
 import { sembrarDeclaracionesDemo } from '../infrastructure/persistence/postgres/sembrarDeclaraciones.js';
 import { sembrarTramites } from '../infrastructure/persistence/postgres/sembrarTramites.js';
 import { sembrarUsuariosDemo } from '../infrastructure/persistence/postgres/sembrarUsuarios.js';
@@ -38,6 +39,8 @@ try {
     console.info(`Usuarios demo sembrados: ${u.usuarios} usuarios en ${u.facultades} facultades.`);
     const d = await sembrarDeclaracionesDemo(pool);
     console.info(`Declaraciones juradas demo sembradas: ${d.declaraciones}.`);
+    const b = await sembrarBoletasDemo(pool);
+    console.info(`Boletas de pago demo sembradas: ${b.boletas}.`);
   }
 } finally {
   await pool.end();

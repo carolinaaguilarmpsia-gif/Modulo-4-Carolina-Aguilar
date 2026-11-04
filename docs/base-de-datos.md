@@ -27,6 +27,7 @@ En `backend/.env` debe estar `DATABASE_URL=postgres://sgai:sgai@localhost:5432/s
 | `declaraciones_juradas` | cada DJ con su docente, facultad, estado (`CHECK` con los 6 estados) y `campos_formulario` en `jsonb` |
 | `historial_dj` | una fila por cada cambio de estado, con quién lo hizo y las observaciones (RB-06) |
 | `calendarios_academicos` | un calendario por período y ámbito (`INSTITUCIONAL` o el id de la facultad); `eventos` en `jsonb` |
+| `boletas_pago` | boletas de cada docente: `periodo` (`AAAA-MM`, con `CHECK`), `haber`, `descuentos` en `jsonb` y `sincronizada_en`; una por docente y período (FSD-UC-005) |
 | `tramites_departamentos` | 5 departamentos, con su `orden` |
 | `tramites` | 34 trámites; `requisitos` y `requisitos_detallados` en `jsonb` |
 | `conversaciones` | estado del orquestador; `historial` en `jsonb` |
@@ -40,7 +41,7 @@ Decisiones:
 - El calendario se reemplaza completo en cada guardado (`UPSERT` por período y ámbito), igual que el contrato del puerto.
 - `db:setup` no siembra usuarios ni DJ demo si `NODE_ENV=production`: son cuentas y datos de ejemplo. Sembrar de nuevo no pisa una DJ que ya cambió de estado.
 
-Las migraciones están en `backend/infrastructure/persistence/postgres/migrations/` (`001` trámites y conversaciones, `002` usuarios, perfiles y roles, `003` declaraciones juradas y calendario); para un cambio de esquema se agrega un `004_...sql`.
+Las migraciones están en `backend/infrastructure/persistence/postgres/migrations/` (`001` trámites y conversaciones, `002` usuarios, perfiles y roles, `003` declaraciones juradas y calendario, `004` boletas de pago); para un cambio de esquema se agrega un `005_...sql`.
 
 ## Cómo elige el servidor
 

@@ -38,6 +38,10 @@
       "description": "Publicación y consulta del calendario."
     },
     {
+      "name": "Boletas de pago",
+      "description": "Consulta de las boletas de pago por el docente titular."
+    },
+    {
       "name": "Asistentes de IA",
       "description": "Asistente de trámites, agente MCP y orquestador."
     }
@@ -332,6 +336,75 @@
             },
             "required": [
               "ambito"
+            ]
+          }
+        ]
+      },
+      "BoletaPagoResumen": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "periodo": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "example": "2026-10"
+          },
+          "haber": {
+            "type": "number"
+          },
+          "totalDescuentos": {
+            "type": "number"
+          },
+          "neto": {
+            "type": "number",
+            "description": "haber menos totalDescuentos."
+          }
+        },
+        "required": [
+          "id",
+          "periodo",
+          "haber",
+          "totalDescuentos",
+          "neto"
+        ]
+      },
+      "BoletaPagoDetalle": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BoletaPagoResumen"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "descuentos": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "concepto": {
+                      "type": "string"
+                    },
+                    "monto": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "concepto",
+                    "monto"
+                  ]
+                }
+              },
+              "sincronizadaEn": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Cuándo se copió la boleta desde nómina."
+              }
+            },
+            "required": [
+              "descuentos",
+              "sincronizadaEn"
             ]
           }
         ]
@@ -2078,6 +2151,170 @@
           },
           "422": {
             "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/boletas-pago": {
+      "get": {
+        "operationId": "listarBoletasPago",
+        "tags": [
+          "Boletas de pago"
+        ],
+        "summary": "Listar mis boletas de pago",
+        "description": "Solo el DOCENTE, y solo ve las suyas (el docente sale del token). La más reciente primero. Con periodo (AAAA-MM) devuelve solo la de ese mes.",
+        "x-fsd-uc": "FSD-UC-005",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            },
+            "required": false,
+            "name": "periodo",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Boletas del docente.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "boletas": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/BoletaPagoResumen"
+                      }
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "boletas",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Los datos enviados no cumplen la validación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/boletas-pago/{id}": {
+      "get": {
+        "operationId": "obtenerBoletaPago",
+        "tags": [
+          "Boletas de pago"
+        ],
+        "summary": "Ver el detalle de una boleta de pago",
+        "description": "Haber, descuentos y neto. Si la boleta es de otro docente responde 403 UNAUTHORIZED_DATA_ACCESS (RB-04); si no existe, 404 BOLETA_NOT_FOUND.",
+        "x-fsd-uc": "FSD-UC-005",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detalle de la boleta.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "boleta": {
+                      "$ref": "#/components/schemas/BoletaPagoDetalle"
+                    },
+                    "correlationId": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "boleta",
+                    "correlationId"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Falta el token, es inválido o expiró.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "El rol o los datos no permiten la operación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "El recurso no existe.",
             "content": {
               "application/json": {
                 "schema": {
