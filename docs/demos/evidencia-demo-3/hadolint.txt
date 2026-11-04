@@ -1,0 +1,2 @@
+# hadolint 2.15.1 sobre backend/Dockerfile — 2026-11-04T13:09Z
+codigo de salida: 0  (0 = sin hallazgos)
