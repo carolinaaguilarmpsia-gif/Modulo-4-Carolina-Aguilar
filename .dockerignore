@@ -3,8 +3,24 @@ node_modules
 .git
 .env
 **/.env
-**/.env.local
+**/.env.*
+!**/.env.example
+dist
 coverage
 playwright-report
 test-results
 backend/data/conversaciones.json
+# Lab S08: lo que no se ejecuta no entra a la imagen
+**/*.test.ts
+**/*.md
+docs
+e2e
+evals
+redteam
+prototipos
+pocs
+demo
+entrega_M7
+frontend
+aidlc
+.claude

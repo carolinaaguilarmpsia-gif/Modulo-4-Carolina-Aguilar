@@ -1,0 +1,91 @@
+# Experimento E3 — Trámites DPA en sus dos formas. Puertos 18300-18399, solo en 127.0.0.1.
+#
+#   docker compose -f compose.e3.yaml --env-file bench/e3/formas/proceso.env up -d --build --wait   monolito modular
+#   docker compose -f compose.e3.yaml --env-file bench/e3/formas/http.env    up -d --build --wait   api -> toxiproxy -> tramites
+#   docker compose -f compose.e3.yaml --profile "*" down -v                                         borra todo (cualquiera de las dos)
+# (Un "down" sin --profile "*" deja vivos a tramites y toxiproxy en la forma extraída.)
+name: e3-tramites
+
+x-entorno-comun: &entorno-comun
+  NODE_ENV: production # igual que la imagen real; exige JWT_SECRET y DATABASE_URL
+  JWT_SECRET: ${JWT_SECRET:-secreto-de-prueba-e3}
+  DATABASE_URL: postgres://sgai:sgai@db:5432/sgai
+  IA_HABILITADA: "false" # camino keyword: la medición no depende de Groq ni de Ollama
+
+services:
+  db:
+    image: postgres:17@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
+    environment: { POSTGRES_USER: sgai, POSTGRES_PASSWORD: sgai, POSTGRES_DB: sgai }
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgai -d sgai"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  migrar:
+    # Una sola vez: aplica el esquema y siembra los 34 trámites. api y tramites esperan a que termine.
+    build: { context: ., dockerfile: backend/Dockerfile }
+    image: e3-tramites/app:local
+    command: ["node", "--import", "tsx", "scripts/db-setup.ts"]
+    environment: *entorno-comun
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: e3-tramites/app:local
+    command: ["node", "--import", "tsx", "api/server.ts"]
+    environment:
+      <<: *entorno-comun
+      # proceso = AsistenteTramitesEnProceso; http = AsistenteTramitesHttp (por la red)
+      TRAMITES_MODO: ${TRAMITES_MODO:-proceso}
+      # La API llama al proxy, no al módulo: así Toxiproxy le puede romper la red.
+      TRAMITES_URL: http://toxiproxy:8666
+      PORT: "3001"
+    ports: ["127.0.0.1:18300:3001"]
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+      # required:false -> en la forma "proceso" estos servicios no existen (perfil apagado).
+      tramites: { condition: service_healthy, required: false }
+      toxiproxy: { condition: service_started, required: false }
+    healthcheck:
+      # /health no toca el módulo de trámites (es la ruta de control).
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  tramites:
+    # La misma imagen que la API, con el otro punto de entrada: solo el módulo de trámites.
+    image: e3-tramites/app:local
+    profiles: ["extraido"]
+    command: ["node", "--import", "tsx", "api/main-tramites.ts"]
+    environment:
+      <<: *entorno-comun
+      PORT: "3002"
+    ports: ["127.0.0.1:18301:3002"] # solo para probarlo a mano
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.13.0@sha256:5d3dae09bc185dcc5ff6cf43abf6062a4a720aff0c4306a471e773acdcd107aa
+    profiles: ["extraido"]
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    environment: { LOG_LEVEL: error }
+    volumes: ["./bench/e3/toxiproxy/toxiproxy.json:/config/toxiproxy.json:ro"]
+    ports: ["127.0.0.1:18310:8474"] # API de Toxiproxy
+    depends_on:
+      tramites: { condition: service_healthy }
+
+  k6:
+    # Solo con "docker compose run --rm k6 run ..." (perfil "carga"; no arranca con up).
+    image: grafana/k6:2.3.0@sha256:2dd4756ec6e14e62778916e1eb850108e4b499304c02df56760fa0bdb0fba0b8
+    profiles: ["carga"]
+    volumes:
+      - ./bench/e3/k6:/k6:ro
+      - ./bench/e3/resultados:/out

@@ -1,0 +1,45 @@
+{
+  "nombre": "http-colgado-4",
+  "falla": "colgado",
+  "rate_por_ruta": 20,
+  "duracion_s": 70,
+  "calentamiento_s": 10,
+  "ventana_falla_s": [
+    30,
+    50
+  ],
+  "recuperacion_s": 4,
+  "recuperacion_censurada": false,
+  "fases": {
+    "modulo.antes": {
+      "peticiones": 400,
+      "p95_ms": 10.47,
+      "errores_pct": 0
+    },
+    "modulo.durante": {
+      "peticiones": 400,
+      "p95_ms": 2040.83,
+      "errores_pct": 99.25
+    },
+    "modulo.despues": {
+      "peticiones": 404,
+      "p95_ms": 63.36,
+      "errores_pct": 17.57
+    },
+    "control.antes": {
+      "peticiones": 400,
+      "p95_ms": 2.65,
+      "errores_pct": 0
+    },
+    "control.durante": {
+      "peticiones": 400,
+      "p95_ms": 10.06,
+      "errores_pct": 0
+    },
+    "control.despues": {
+      "peticiones": 404,
+      "p95_ms": 22.66,
+      "errores_pct": 0
+    }
+  }
+}
