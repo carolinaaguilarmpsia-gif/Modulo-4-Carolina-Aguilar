@@ -1,0 +1,45 @@
+{
+  "nombre": "proceso-colgado-3",
+  "falla": "ninguna (en proceso)",
+  "rate_por_ruta": 20,
+  "duracion_s": 70,
+  "calentamiento_s": 10,
+  "ventana_falla_s": [
+    30,
+    50
+  ],
+  "recuperacion_s": 0,
+  "recuperacion_censurada": false,
+  "fases": {
+    "modulo.antes": {
+      "peticiones": 400,
+      "p95_ms": 5.64,
+      "errores_pct": 0
+    },
+    "modulo.durante": {
+      "peticiones": 400,
+      "p95_ms": 8.01,
+      "errores_pct": 0
+    },
+    "modulo.despues": {
+      "peticiones": 402,
+      "p95_ms": 2.93,
+      "errores_pct": 0
+    },
+    "control.antes": {
+      "peticiones": 400,
+      "p95_ms": 4.3,
+      "errores_pct": 0
+    },
+    "control.durante": {
+      "peticiones": 400,
+      "p95_ms": 6.76,
+      "errores_pct": 0
+    },
+    "control.despues": {
+      "peticiones": 401,
+      "p95_ms": 2.59,
+      "errores_pct": 0
+    }
+  }
+}

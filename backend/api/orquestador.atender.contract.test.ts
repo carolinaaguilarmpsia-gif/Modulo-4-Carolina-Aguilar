@@ -17,6 +17,7 @@ import { JsonConversacionRepository } from '../infrastructure/persistence/JsonCo
 import { JsonTramiteRepository } from '../infrastructure/persistence/JsonTramiteRepository.js';
 import { ConsoleNotificacionPublisher } from '../infrastructure/notifications/ConsoleNotificacionPublisher.js';
 import { ConsoleEscalamientoPublisher } from '../infrastructure/notifications/ConsoleEscalamientoPublisher.js';
+import { AsistenteTramitesEnProceso } from '../infrastructure/tramites/AsistenteTramitesEnProceso.js';
 import { JwtSigner } from '../infrastructure/auth/JwtSigner.js';
 import { OrquestadorController } from './controllers/orquestador.controller.js';
 import { createOrquestadorRouter } from './routes/orquestador.routes.js';
@@ -68,7 +69,7 @@ describe('Contrato — POST /api/v1/orquestador/atender', () => {
     usuarios = new InMemoryUsuarioRepository();
 
     const djService = new DeclaracionJuradaService(new InMemoryDeclaracionJuradaRepository(), new ConsoleNotificacionPublisher());
-    const asistenteTramites = new AsistenteTramitesService(new JsonTramiteRepository(rutaDbJson), null, false);
+    const asistenteTramites = new AsistenteTramitesEnProceso(new AsistenteTramitesService(new JsonTramiteRepository(rutaDbJson), null, false));
 
     // Única pieza NO real — el LLM del clasificador. Nunca redacta la respuesta final,
     // solo clasifica; acá lo hacemos fallar a propósito para forzar el camino determinístico

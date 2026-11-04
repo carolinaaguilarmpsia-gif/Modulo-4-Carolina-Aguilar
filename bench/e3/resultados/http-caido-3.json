@@ -1,0 +1,45 @@
+{
+  "nombre": "http-caido-3",
+  "falla": "caido",
+  "rate_por_ruta": 20,
+  "duracion_s": 70,
+  "calentamiento_s": 10,
+  "ventana_falla_s": [
+    30,
+    50
+  ],
+  "recuperacion_s": 2,
+  "recuperacion_censurada": false,
+  "fases": {
+    "modulo.antes": {
+      "peticiones": 400,
+      "p95_ms": 506.3,
+      "errores_pct": 0
+    },
+    "modulo.durante": {
+      "peticiones": 400,
+      "p95_ms": 8.55,
+      "errores_pct": 96
+    },
+    "modulo.despues": {
+      "peticiones": 417,
+      "p95_ms": 239.96,
+      "errores_pct": 6.71
+    },
+    "control.antes": {
+      "peticiones": 400,
+      "p95_ms": 203.15,
+      "errores_pct": 0
+    },
+    "control.durante": {
+      "peticiones": 400,
+      "p95_ms": 4.88,
+      "errores_pct": 0
+    },
+    "control.despues": {
+      "peticiones": 417,
+      "p95_ms": 101.93,
+      "errores_pct": 0
+    }
+  }
+}

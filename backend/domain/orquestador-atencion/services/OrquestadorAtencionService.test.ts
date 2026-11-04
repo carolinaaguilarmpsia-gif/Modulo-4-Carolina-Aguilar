@@ -140,7 +140,8 @@ function construirServicio(params: {
   const usuarios = new FakeUsuarioRepository(params.usuarios ?? []);
   const djRepo = new FakeDJRepository();
   const djService = new DeclaracionJuradaService(djRepo, new FakeNotificacionPublisher());
-  const asistenteTramites = new AsistenteTramitesService(new FakeTramiteRepository(), null, false);
+  const servicioTramites = new AsistenteTramitesService(new FakeTramiteRepository(), null, false);
+  const asistenteTramites = { preguntar: (p: string) => servicioTramites.preguntar(p), estado: async () => servicioTramites.estado() };
   const conversaciones = new FakeConversacionRepository();
   const escalamiento = new FakeEscalamientoPublisher();
   const clasificador = new ClasificarIntencionService(new FakeLlmClient(params.respuestasClasificador));

@@ -5,7 +5,7 @@ import type { IUsuarioRepository } from '../../administracion/ports/out/IUsuario
 import type { DeclaracionJuradaService } from '../../declaracion-jurada/services/DeclaracionJuradaService.js';
 import type { ActorContext } from '../../declaracion-jurada/types/CrearDJ.js';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../shared/errors/DomainError.js';
-import type { AsistenteTramitesService } from '../../tramites-dpa/services/AsistenteTramitesService.js';
+import type { IAsistenteTramites } from '../../tramites-dpa/ports/in/IAsistenteTramites.js';
 import type { IConversacionRepository } from '../ports/out/IConversacionRepository.js';
 import type { IEscalamientoPublisher } from '../ports/out/IEscalamientoPublisher.js';
 import { ClasificarIntencionService } from './ClasificarIntencionService.js';
@@ -30,7 +30,7 @@ export class OrquestadorAtencionService {
     private readonly clasificador: ClasificarIntencionService,
     private readonly usuarios: IUsuarioRepository,
     private readonly djService: DeclaracionJuradaService,
-    private readonly asistenteTramites: AsistenteTramitesService,
+    private readonly asistenteTramites: IAsistenteTramites,
     private readonly escalamiento: IEscalamientoPublisher
   ) {}
 
