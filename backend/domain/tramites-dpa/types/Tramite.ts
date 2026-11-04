@@ -4,6 +4,8 @@ export interface Tramite {
   descripcion?: string;
   normativa?: string;
   requisitos: string[];
+  /** Solo algunos trámites lo traen: formularios con código, alcance y nota. */
+  requisitos_detallados?: Record<string, unknown>[];
   tiempo: string;
 }
 

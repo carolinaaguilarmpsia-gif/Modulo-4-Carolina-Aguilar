@@ -1,0 +1,21 @@
+# Base de datos local para el desarrollo: `docker compose -f compose.db.yaml up -d`
+# y luego `npm run db:setup --prefix backend`. Credenciales solo para esta máquina.
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: sgai
+      POSTGRES_PASSWORD: sgai
+      POSTGRES_DB: sgai
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - sgai-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sgai -d sgai"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  sgai-pgdata:
