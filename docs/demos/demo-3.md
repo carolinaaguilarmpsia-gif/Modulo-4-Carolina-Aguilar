@@ -6,10 +6,38 @@
 
 | Integrante | Funcionalidades (tamaño) | Caso de uso del FSD | Repositorio |
 |---|---|---|---|
-| Carolina Aguilar | 1. Imagen y stack de producción: Dockerfile multi-stage, `compose.yaml` y datos en PostgreSQL (mediana) | Transversal (parte técnica obligatoria) | https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar/tree/release/8.3.0 |
-| | 2. Análisis E3: ¿conviene extraer el módulo Trámites DPA como microservicio? (mediana) | Transversal (análisis a elección) | |
+| Carolina Aguilar | 1. Listar mis boletas de pago (pequeña) | UC-L-03 Consultar Boleta de Pago (FSD-UC-005) | https://github.com/carolinaaguilarmpsia-gif/Modulo-4-Carolina-Aguilar/tree/release/8.3.0 |
+| | 2. Ver el detalle de una boleta, solo el docente titular (pequeña) | UC-L-03 (FSD-UC-005) · RB-04 | |
+| | 3. Filtrar mis boletas por mes (pequeña) | UC-L-03 (FSD-UC-005) | |
+| | Parte técnica 1: imagen y stack de producción (Dockerfile multi-stage, `compose.yaml`, PostgreSQL, hadolint y Trivy) | Transversal | |
+| | Parte técnica 2: análisis E3, ¿conviene extraer Trámites DPA como microservicio? (opción B) | Transversal | |
 
 Proyecto unipersonal: el release reúne solo el trabajo de Carolina Aguilar.
+
+### Criterios de aceptación de las funcionalidades (UC-L-03)
+
+Endpoints: `GET /api/v1/boletas-pago` (con `?periodo=AAAA-MM` opcional) y `GET /api/v1/boletas-pago/{id}`. Declarados en `openapi.json`. Las boletas viven en PostgreSQL (`boletas_pago`, migración `004`).
+
+**1. Listar mis boletas**
+- Un docente autenticado ve sus boletas, la más reciente primero, con haber, total de descuentos y neto.
+- Solo ve las suyas: el docente sale del token, no de la petición.
+- Un rol que no es docente recibe 403 `INSUFFICIENT_ROLE`; sin token, 401.
+
+**2. Detalle de una boleta (RB-04)**
+- El docente titular ve haber, descuentos concepto por concepto, neto y la fecha en que se copió desde nómina.
+- Si la boleta es de otro docente: 403 `UNAUTHORIZED_DATA_ACCESS`, sin devolver ningún dato de esa boleta.
+- Si la boleta no existe: 404 `BOLETA_NOT_FOUND`.
+
+**3. Filtrar por mes**
+- `?periodo=2026-09` devuelve solo la boleta de ese mes (lista vacía si no hay).
+- Un período mal escrito (`2026-13`, `octubre`) responde 422.
+
+**Fuera de alcance, declarado:** la descarga en PDF y la sincronización real desde nómina (no existe el adaptador, FSD §M-INTEGR). Las boletas son datos de ejemplo sembrados.
+
+| # | Cómo se comprueba | Resultado |
+|---|---|---|
+| Pruebas | `ConsultarBoletasService.test.ts`, `boletasPago.http.test.ts`, `PgBoletaPagoRepository.test.ts` | 25 pruebas pasan |
+| En el stack | `docker compose up -d --wait`; login `juan.jaldin@universidad.edu.bo` / `Demo1234!`; `GET /api/v1/boletas-pago` | 2 boletas; la de otro docente da 403; una inexistente da 404 |
 
 ## 2. Imagen y stack de producción
 
@@ -30,7 +58,6 @@ Proyecto unipersonal: el release reúne solo el trabajo de Carolina Aguilar.
 | 4 | La imagen no corre como root y la base no es accesible desde fuera | `docker compose exec api id`; `docker compose port db 5432` | uid 1000 (`node`); sin puerto publicado |
 | 5 | El Dockerfile pasa hadolint | `hadolint backend/Dockerfile` (2.15.1) | **0 hallazgos** (`evidencia-demo-3/hadolint.txt`) |
 | 6 | La imagen no tiene hallazgos altos o críticos sin justificar | Trivy, severidad `HIGH,CRITICAL` | **0 corregibles**; 33 sin corrección publicada, justificados abajo (`evidencia-demo-3/trivy-resumen.md`) |
-
 ### Trivy: qué se arregló y qué se justifica
 
 La primera pasada dio **45** hallazgos altos o críticos. **12 eran de dependencias de Node y tenían versión corregida**, así que se arreglaron actualizando el `package-lock.json`: `proxy-addr` 2.0.7 → 2.0.8 (la única crítica), `@modelcontextprotocol/sdk` 1.30.0 → 1.32.2, `body-parser` → 1.20.9 y 2.4.0, y `fast-uri` → 3.1.9. Tras reconstruir la imagen y volver a escanear quedan **33, todos del sistema Debian de la imagen base, sin corrección publicada**:
@@ -81,6 +108,17 @@ Informe completo en `bench/e3/INFORME.md`, hipótesis (escrita antes de medir) e
 - **Decisión (ADR-0007): no extraer por ahora.** El aislamiento funciona, pero hoy no hay carga que lo pida: con la IA apagada y el catálogo en memoria, una pregunta cuesta ~0,2 ms de CPU. Extraer añadiría un contenedor, reintentos y circuito que operar y un modo de falla nuevo, sin beneficio medido.
 - **Cuándo se reconsidera:** con `IA_HABILITADA=true`, si el p95 de `POST /preguntar` supera 1000 ms y el de `GET /health` sube más de 2×; o si el módulo necesita escalar a otro ritmo (~100 peticiones/s por instancia).
 - **Limitaciones declaradas:** máquina cargada (5 a 25 de carga con 8 núcleos), tandas seguidas y no alternadas, y no se midió el caso con Groq/Ollama.
+
+### Criterios de aceptación del análisis E3
+
+| # | Criterio | Cómo se comprueba | Resultado |
+|---|---|---|---|
+| 1 | El módulo elegido está justificado con datos del código | Sección anterior; `backend/domain/tramites-dpa` | Otro *runtime*, datos propios y una única entrada (`preguntar()`) |
+| 2 | La interfaz existe en dos formas y quien la consume no distingue cuál es | `IAsistenteTramites.ts`; `TRAMITES_MODO=proceso` y `TRAMITES_MODO=http`; `node scripts/chequear-frontera.mjs` | Ambas formas implementadas; la frontera se verifica con ese script |
+| 3 | Hay una hipótesis escrita antes de medir | `bench/e3/HIPOTESIS.md` | Existe |
+| 4 | Hay mediciones comparables, con tabla y repetidas | `bench/e3/INFORME.md`; tabla de arriba | 20 corridas (5 por tanda); p95, pérdidas, errores en la ruta aislada y recuperación |
+| 5 | Hay una decisión documentada con condiciones para reconsiderarla | `docs/ADR/0007-extraer-tramites-dpa.md` | No extraer por ahora; se reconsidera con los umbrales indicados |
+| 6 | Las limitaciones de la medición están declaradas | Esta sección y `bench/e3/INFORME.md` | Declaradas (máquina cargada, tandas seguidas, sin Groq/Ollama) |
 
 ## 4. Cómo se comprueba
 
